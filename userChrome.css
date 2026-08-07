@@ -67,6 +67,35 @@ tab-group.zao-has-custom-icon .tab-group-label::before {
   background-size: contain;
 }
 
+/* Advanced-Tab-Groups-style accent (from Vertex-Mods/Advanced-Tab-Groups).
+   Layered ADDITIVELY on top of Wand's group styling: a left accent bar in the
+   group's color and a tidy, rounded, hover-highlighted label row. Deliberately
+   does NOT set the label background, so Wand's group gradients and custom icons
+   above stay intact; and collapse stays owned by the rule at the top of this
+   section. Keys off Zen's own tokens (--tab-group-color, --border-radius-medium),
+   so it stays theme-adaptive and subdued under .zao-minimal. */
+tab-group:not([split-view-group]) .tab-group-label-container {
+  border-radius: var(--border-radius-medium, 6px) !important;
+  min-height: 34px !important;
+}
+tab-group:not([split-view-group]) .tab-group-label-container:hover {
+  background-color: var(--tab-hover-background-color, color-mix(in srgb, currentColor 8%, transparent)) !important;
+}
+tab-group:not([split-view-group]) .tab-group-container {
+  position: relative;
+  margin-inline-start: 12px !important;
+}
+tab-group:not([split-view-group]) .tab-group-container::after {
+  content: "";
+  position: absolute;
+  left: -2px;
+  top: 0;
+  height: 100%;
+  width: 2px;
+  pointer-events: none;
+  background: var(--tab-group-color);
+}
+
 /* ─── 2. Toolbar Button ──────────────────────────────────────────────────── */
 
 /* Wiggle the wand on click. */
