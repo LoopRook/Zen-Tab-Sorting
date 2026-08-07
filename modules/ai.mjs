@@ -1,4 +1,4 @@
-// OpenTabSort Zen — Pass 2 (local AI) using Firefox's bundled ML engine.
+// Zen Tab Sorting — Pass 2 (local AI) using Firefox's bundled ML engine.
 //
 // SCOPE: this engine ONLY assigns unmatched tabs into EXISTING rule-matched
 // groups. It does not invent new groups or name clusters — that role belongs

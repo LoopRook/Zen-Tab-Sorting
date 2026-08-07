@@ -1,4 +1,4 @@
-// OpenTabSort Zen — Ollama prompt builders.
+// Zen Tab Sorting — Ollama prompt builders.
 //
 // Pure string-building functions for the five prompts we send to Ollama:
 //   - classifyExisting  → "fit each tab into one of the existing categories"

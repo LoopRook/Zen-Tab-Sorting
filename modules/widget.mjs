@@ -1,4 +1,4 @@
-// OpenTabSort Zen — settings rules editor widget.
+// Zen Tab Sorting — settings rules editor widget.
 // Builds the pill table (Category | Domains) with +/- buttons, color swatch per row,
 // hex input, and live persistence to the rules pref. Also wires a pref observer so
 // external changes (right-click "Add to Rule…" submenu, AI Pass 2, Import) refresh the table in real time.
@@ -549,7 +549,7 @@ export const buildBackupRestoreSection = () => {
       try {
         const list = await Downloads.getList(Downloads.PUBLIC);
         const download = await Downloads.createDownload({
-          source: { url: "data:application/json,opentabsort-zen-export" },
+          source: { url: "data:application/json,zen-tab-sorting-export" },
           target: { path: targetPath },
         });
         download.succeeded = true;

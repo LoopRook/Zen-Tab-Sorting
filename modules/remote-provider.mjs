@@ -1,4 +1,4 @@
-// OpenTabSort Zen — remote provider Pass 2 drivers.
+// Zen Tab Sorting — remote provider Pass 2 drivers.
 //
 // This mirrors the Ollama orchestration shape, but the transport is any
 // OpenAI/Gemini/custom provider explicitly enabled in preferences.

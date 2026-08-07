@@ -83,7 +83,7 @@ const collectFileErrors = (rootDir, filePath) => {
     if (!FLANTIG_URL_PATTERN.test(line)) return;
     FLANTIG_URL_PATTERN.lastIndex = 0;
     if (!isAllowedUpstreamCredit(line)) {
-      errors.push(`${label}:${index + 1}: public install URL must point to nggurbanov/OpenTabSort-Zen`);
+      errors.push(`${label}:${index + 1}: public install URL must point to LoopRook/Zen-Tab-Sorting`);
     }
   });
 

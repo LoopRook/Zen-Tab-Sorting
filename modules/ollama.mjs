@@ -1,4 +1,4 @@
-// OpenTabSort Zen — Ollama engine orchestrators.
+// Zen Tab Sorting — Ollama engine orchestrators.
 //
 // Talks to a local Ollama daemon (via modules/ollama-transport.mjs) to do
 // AI-driven Pass 2 sorting. Two flavors:

@@ -83,12 +83,12 @@ const waitForZenReady = async (marionette) => waitUntil(async () => {
       hasButton: !!win?.document?.getElementById("tab-wand-button"),
       hasCommand: !!win?.document?.getElementById("cmd_zenAutoOrganize"),
       hasListener: !!win?.document?.querySelector("commandset#zenCommandSet")?._zaoCommandListener,
-      hasHarness: typeof win?.OpenTabSortZen?.handleOrganizeClick === "function",
+      hasHarness: typeof win?.ZenTabSorting?.handleOrganizeClick === "function",
       hasBrowser: !!win?.gBrowser?.tabs,
     };
   `);
   return { done: state.hasSineAPI && state.hasButton && state.hasCommand && state.hasListener && state.hasHarness && state.hasBrowser, state };
-}, "Zen did not load Sine/OpenTabSort");
+}, "Zen did not load Sine/Zen Tab Sorting");
 
 const prepareTabs = async (marionette, scenario) => {
   await marionette.execute(`
@@ -129,7 +129,7 @@ const clickWand = async (marionette) => {
   const result = await marionette.executeAsync(`
     const done = arguments[arguments.length - 1];
     const win = Services.wm.getMostRecentWindow("navigator:browser");
-    win.OpenTabSortZen.handleOrganizeClick()
+    win.ZenTabSorting.handleOrganizeClick()
       .then(() => done({ directHandler: true }))
       .catch((error) => done({ error: error?.stack || error?.message || String(error) }));
   `);
@@ -179,7 +179,7 @@ const collectSortedState = async (marionette) => await marionette.execute(`
     workspaceTabs: workspaceTabs.length,
     eligibleLikeTabs: eligibleLikeTabs.length,
     emptyTabs: workspaceTabs.filter((tab) => tab.hasAttribute("zen-empty-tab")).length,
-    lastRun: win.OpenTabSortZenLastRun || null,
+    lastRun: win.ZenTabSortingLastRun || null,
     sampleUrls: workspaceTabs.slice(0, 6).map((tab) => win.gBrowser.getBrowserForTab(tab)?.currentURI?.spec || ""),
     aiEngine: Services.prefs.getStringPref("extensions.zen-auto-organize.ai-engine", "missing"),
     aiSortMode: Services.prefs.getStringPref("extensions.zen-auto-organize.ai-sort-mode", "missing"),

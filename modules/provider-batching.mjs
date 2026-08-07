@@ -1,4 +1,4 @@
-// OpenTabSort Zen — provider request batching.
+// Zen Tab Sorting — provider request batching.
 //
 // Remote/provider LLMs should not receive a 300-tab prompt in one shot. Keep
 // chunks bounded, then merge chunk-local JSON maps back onto original tabs.

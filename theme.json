@@ -1,8 +1,8 @@
 {
-  "id": "opentabsort-zen",
-  "name": "OpenTabSort Zen",
+  "id": "zen-tab-sorting",
+  "name": "Zen Tab Sorting",
   "description": "Rule-first tab sorting for Zen Browser with optional local AI and configurable provider support.",
-  "homepage": "https://github.com/nggurbanov/OpenTabSort-Zen",
+  "homepage": "https://github.com/LoopRook/Zen-Tab-Sorting",
   "supportsUnload": false,
   "style": {
     "chrome": "userChrome.css"
@@ -16,9 +16,9 @@
       ]
     }
   },
-  "readme": "https://raw.githubusercontent.com/nggurbanov/OpenTabSort-Zen/main/README.md",
-  "image": "https://raw.githubusercontent.com/nggurbanov/OpenTabSort-Zen/main/image.png",
-  "author": "Tyrell, based on Zen Tab Wand by franklinl",
+  "readme": "https://raw.githubusercontent.com/LoopRook/Zen-Tab-Sorting/main/README.md",
+  "image": "https://raw.githubusercontent.com/LoopRook/Zen-Tab-Sorting/main/image.png",
+  "author": "LoopRook, based on OpenTabSort Zen by nggurbanov and Zen Tab Wand by flantig",
   "ai": "yes",
   "version": "1.2.3",
   "preferences": "preferences.json",
@@ -30,6 +30,6 @@
     "Ollama"
   ],
   "createdAt": "2026-05-15",
-  "updatedAt": "2026-06-23",
+  "updatedAt": "2026-08-07",
   "fork": ["zen"]
 }

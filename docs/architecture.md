@@ -124,7 +124,7 @@ Finally for every click:
 
 ## State persistence
 
-All prefs use the `extensions.zen-auto-organize.*` prefix (legacy; preserved across the rename to `opentabsort-zen` so existing users keep their data).
+All prefs use the `extensions.zen-auto-organize.*` prefix (legacy; preserved across the rename to `zen-tab-sorting` so existing users keep their data).
 
 - **Rules** live in `extensions.zen-auto-organize.rules-json` (a JSON-encoded array). Read/written by `rules.mjs`. Observed by the widget so external changes (right-click "Add to Rule" submenu, Backup & Restore import, AI Pass 2) refresh the table live.
 - **Skip domains** live in `extensions.zen-auto-organize.skip-domains-json` (a JSON-encoded array of hostname patterns). Read by click-handler step 6 to park matching tabs at the top of the workspace.

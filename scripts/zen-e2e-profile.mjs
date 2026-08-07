@@ -19,7 +19,7 @@ export const findDefaultSineProfile = async () => {
 };
 
 export const createLabProfile = async (repoRoot, sineProfile) => {
-  const profileDir = await mkdtemp(join(tmpdir(), "opentabsort-zen-e2e-"));
+  const profileDir = await mkdtemp(join(tmpdir(), "zen-tab-sorting-e2e-"));
   const chromeDir = join(profileDir, "chrome");
   const modsDir = join(chromeDir, "sine-mods");
   await mkdir(modsDir, { recursive: true });
@@ -28,7 +28,7 @@ export const createLabProfile = async (repoRoot, sineProfile) => {
     await cp(join(sineProfile, "chrome", name), join(chromeDir, name), { recursive: true });
   }
 
-  await cp(repoRoot, join(modsDir, "opentabsort-zen"), {
+  await cp(repoRoot, join(modsDir, "zen-tab-sorting"), {
     recursive: true,
     filter: (source) => !LAB_COPY_EXCLUDE_NAMES.has(source.split("/").at(-1)),
   });
@@ -37,7 +37,7 @@ export const createLabProfile = async (repoRoot, sineProfile) => {
   theme.enabled = true;
   theme.origin = "e2e-local";
   theme["no-updates"] = true;
-  await writeFile(join(modsDir, "mods.json"), JSON.stringify({ "opentabsort-zen": theme }), "utf8");
+  await writeFile(join(modsDir, "mods.json"), JSON.stringify({ "zen-tab-sorting": theme }), "utf8");
   return { profileDir };
 };
 
@@ -70,8 +70,8 @@ export const scenarioPrefs = ({ scenario, providerPort, marionettePort }) => {
     ["extensions.zen-auto-organize.ai-new-group-behavior", "transient"],
     ["extensions.zen-auto-organize.ai-existing-behavior", "transient"],
     ["extensions.zen-auto-organize.ai-custom-endpoint", `http://127.0.0.1:${providerPort}/v1`],
-    ["extensions.zen-auto-organize.ai-custom-api-key", "opentabsort-e2e-local-key"],
-    ["extensions.zen-auto-organize.ai-custom-model", "opentabsort-e2e"],
+    ["extensions.zen-auto-organize.ai-custom-api-key", "zen-tab-sorting-e2e-local-key"],
+    ["extensions.zen-auto-organize.ai-custom-model", "zen-tab-sorting-e2e"],
     ["extensions.zen-auto-organize.ai-custom-format", "openai"],
     ["extensions.zen-auto-organize.rules-json", JSON.stringify(rules)],
   ];

@@ -1,4 +1,4 @@
-// OpenTabSort Zen — Ollama HTTP transport layer.
+// Zen Tab Sorting — Ollama HTTP transport layer.
 //
 // Everything that talks to the Ollama daemon over HTTP lives here: timeouts,
 // AbortController-backed fetch, ping/health-check, warmup, the JSON

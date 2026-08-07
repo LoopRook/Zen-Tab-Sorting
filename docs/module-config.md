@@ -42,7 +42,7 @@ RULES_URL                     // chrome:// path to rules.json (legacy fallback)
 CSS_URL                       // chrome:// path to userChrome.css (fetched into prefs scope)
 BUTTON_ID                     // toolbar wand button DOM id ("tab-wand-button")
 COMMAND_ID                    // XUL command id for the button
-MOD_ID                        // "opentabsort-zen" — public mod id for historical/debug use;
+MOD_ID                        // "zen-tab-sorting" — public mod id for historical/debug use;
                               // dialog detection lives in prefs-ui.mjs's
                               // isOurDialog() which keys off the "Group Rules"
                               // separator label, not this id.
@@ -58,4 +58,4 @@ HEX_PALE_MIX_PERCENT          // 20
 POPOVER_GAP_PX                // 8 — popover offset from its swatch anchor
 ```
 
-> **Note:** the pref-key prefix is `extensions.zen-auto-organize.*`. That's a legacy from the mod's earlier name; we kept it across the rename to `opentabsort-zen` so existing users' rules and settings carry over unchanged.
+> **Note:** the pref-key prefix is `extensions.zen-auto-organize.*`. That's a legacy from the mod's earlier name; we kept it across the rename to `zen-tab-sorting` so existing users' rules and settings carry over unchanged.

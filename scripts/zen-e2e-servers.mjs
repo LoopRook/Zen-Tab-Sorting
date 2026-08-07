@@ -7,13 +7,13 @@ const DEFAULT_OPENROUTER_MODEL = "google/gemini-3.5-flash";
 
 export const startFixturePageServer = () => startServer((request, response) => {
   const page = fixturePageForPath(request.url || "");
-  const label = page?.title || request.url?.replace(/\W+/g, " ").trim() || "OpenTabSort fixture";
+  const label = page?.title || request.url?.replace(/\W+/g, " ").trim() || "Zen Tab Sorting fixture";
   const description = page?.description || label;
   response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
   response.end([
     `<!doctype html><title>${escapeHtml(label)}</title>`,
     `<meta property="og:type" content="website">`,
-    `<meta property="og:site_name" content="OpenTabSort E2E Fixture">`,
+    `<meta property="og:site_name" content="Zen Tab Sorting E2E Fixture">`,
     `<meta name="description" content="${escapeHtml(description)}">`,
     `<h1>${escapeHtml(label)}</h1>`,
   ].join(""));

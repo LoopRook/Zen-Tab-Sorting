@@ -1,6 +1,6 @@
-# OpenTabSort Zen
+# Zen Tab Sorting
 
-OpenTabSort Zen is a rules-first, hybrid, or full-AI tab organizer for Zen Browser and Sine.
+Zen Tab Sorting is a rules-first, hybrid, or full-AI tab organizer for Zen Browser and Sine.
 It is based on [Zen Tab Wand](https://github.com/flantig/Zen-Tab-Wand) and keeps the parts that made that project better than NeuroSort: a native wand button, editable domain rules, skip domains, backup and restore, tab context-menu rule growth, local AI, Ollama, Plan Mode, and persistent collapsed groups.
 
 This fork adds the pieces NeuroSort did better: explicit provider choice, privacy gates before remote AI, a validation and test harness, release metadata checks, and comparison evidence so the older NeuroSort implementation does not keep hidden advantages.
@@ -11,14 +11,14 @@ This fork adds the pieces NeuroSort did better: explicit provider choice, privac
 - **Local by default.** The built-in Firefox ML engine and Ollama stay on your machine.
 - **Remote providers are explicit.** OpenAI-compatible, Gemini, and custom endpoints are available only when selected and consented to.
 - **Safety harness.** Manifest, preferences, syntax, provider, and security validators are part of `npm run check`.
-- **Sine identity is forked.** The public mod id is `opentabsort-zen`; repository links point to `nggurbanov/OpenTabSort-Zen`.
+- **Sine identity is forked.** The public mod id is `zen-tab-sorting`; repository links point to `LoopRook/Zen-Tab-Sorting`.
 
 ## Installing
 
 In Zen Browser, open Sine and add this repository:
 
 ```text
-nggurbanov/OpenTabSort-Zen
+LoopRook/Zen-Tab-Sorting
 ```
 
 After install, a wand button appears in the workspace separator. Left-click sorts the current workspace. Right-click tabs to add their hostname to a rule or skip list.
@@ -41,7 +41,7 @@ After install, a wand button appears in the workspace separator. Left-click sort
 | Gemini | Sends tab metadata to Google generateContent endpoint | API key, model, consent |
 | Custom | Sends tab metadata to configured OpenAI or Ollama-shaped endpoint | Endpoint, optional key, model, format, consent |
 
-Remote provider consent is separate from provider selection. OpenTabSort should not send tab titles, URLs, or snippets to remote endpoints unless consent and required config are present.
+Remote provider consent is separate from provider selection. Zen Tab Sorting should not send tab titles, URLs, or snippets to remote endpoints unless consent and required config are present.
 
 ## Settings
 
@@ -94,7 +94,7 @@ node scripts/compare-neurosort-advantages.mjs
 
 ## Relationship To Zen Tab Wand
 
-OpenTabSort Zen preserves the MIT-licensed Zen Tab Wand product base and credits its original author. The `extensions.zen-auto-organize.*` preference prefix is intentionally retained for compatibility with existing rules and settings.
+Zen Tab Sorting preserves the MIT-licensed Zen Tab Wand product base and credits its original author. The `extensions.zen-auto-organize.*` preference prefix is intentionally retained for compatibility with existing rules and settings.
 
 ## Relationship To NeuroSort
 

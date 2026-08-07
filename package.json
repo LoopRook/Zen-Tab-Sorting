@@ -1,9 +1,9 @@
 {
-  "name": "opentabsort-zen",
+  "name": "zen-tab-sorting",
   "version": "1.2.3",
   "private": true,
   "type": "module",
-  "description": "OpenTabSort Zen Sine mod validation and provider safety harness.",
+  "description": "Zen Tab Sorting Sine mod validation and provider safety harness.",
   "scripts": {
     "test": "node --test",
     "validate": "node scripts/validate.mjs",
