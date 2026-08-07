@@ -71,7 +71,10 @@
     "options": [
       { "label": "None", "value": "off" },
       { "label": "Local — Built-in model, limited capability", "value": "local" },
-      { "label": "Ollama — Stronger model, requires Ollama running locally", "value": "ollama" }
+      { "label": "Ollama — Stronger model, requires Ollama running locally", "value": "ollama" },
+      { "label": "OpenAI-compatible — Remote or self-hosted /v1/chat/completions", "value": "openai" },
+      { "label": "Gemini — Google AI Studio generateContent", "value": "gemini" },
+      { "label": "Custom — OpenAI or Ollama-compatible endpoint", "value": "custom" }
     ]
   },
   {
@@ -132,5 +135,78 @@
     "label": "Local AI batch size (only used when >75 unmatched tabs; smaller = gentler on CPU, larger = faster)",
     "property": "extensions.zen-auto-organize.ai-local-batch-size",
     "defaultValue": "30"
+  },
+  {
+    "type": "checkbox",
+    "label": "Allow sending tab titles, URLs, and optional page snippets to the selected provider",
+    "property": "extensions.zen-auto-organize.ai-provider-consent",
+    "defaultValue": false
+  },
+  { "type": "separator", "label": "Remote Provider Settings" },
+  {
+    "type": "string",
+    "label": "OpenAI-compatible endpoint",
+    "property": "extensions.zen-auto-organize.ai-openai-endpoint",
+    "defaultValue": "",
+    "placeholder": "https://api.openai.com/v1"
+  },
+  {
+    "type": "string",
+    "label": "OpenAI-compatible API key",
+    "property": "extensions.zen-auto-organize.ai-openai-api-key",
+    "defaultValue": "",
+    "placeholder": "sk-..."
+  },
+  {
+    "type": "string",
+    "label": "OpenAI-compatible model",
+    "property": "extensions.zen-auto-organize.ai-openai-model",
+    "defaultValue": "",
+    "placeholder": "gpt-4o-mini"
+  },
+  {
+    "type": "string",
+    "label": "Gemini API key",
+    "property": "extensions.zen-auto-organize.ai-gemini-api-key",
+    "defaultValue": "",
+    "placeholder": "AIza..."
+  },
+  {
+    "type": "string",
+    "label": "Gemini model",
+    "property": "extensions.zen-auto-organize.ai-gemini-model",
+    "defaultValue": "",
+    "placeholder": "gemini-2.0-flash"
+  },
+  {
+    "type": "string",
+    "label": "Custom endpoint",
+    "property": "extensions.zen-auto-organize.ai-custom-endpoint",
+    "defaultValue": "",
+    "placeholder": "https://example.test/v1"
+  },
+  {
+    "type": "string",
+    "label": "Custom API key",
+    "property": "extensions.zen-auto-organize.ai-custom-api-key",
+    "defaultValue": "",
+    "placeholder": "optional"
+  },
+  {
+    "type": "string",
+    "label": "Custom model",
+    "property": "extensions.zen-auto-organize.ai-custom-model",
+    "defaultValue": "",
+    "placeholder": "model name"
+  },
+  {
+    "type": "dropdown",
+    "label": "Custom request format",
+    "property": "extensions.zen-auto-organize.ai-custom-format",
+    "defaultValue": "openai",
+    "options": [
+      { "label": "OpenAI-compatible chat", "value": "openai" },
+      { "label": "Ollama generate", "value": "ollama" }
+    ]
   }
 ]

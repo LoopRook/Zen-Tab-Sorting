@@ -58,6 +58,8 @@ export const CONFIG = {
   //   "off"    — no AI pass
   //   "local"  — Firefox's bundled ML engine (modules/ai.mjs), existing-groups only
   //   "ollama" — local Ollama daemon (modules/ollama.mjs), existing + new groups
+  //   "openai"/"gemini"/"custom" — remote provider (modules/remote-provider.mjs),
+  //          existing + new groups; gated behind the data-sending consent pref.
   AI_ENGINE_PREF: "extensions.zen-auto-organize.ai-engine",
   AI_TITLE_LEARNING_PREF: "extensions.zen-auto-organize.ai-title-learning",
   AI_EXISTING_BEHAVIOR_PREF: "extensions.zen-auto-organize.ai-existing-behavior",
@@ -71,6 +73,20 @@ export const CONFIG = {
   LOCAL_ACKNOWLEDGED_PREF: "extensions.zen-auto-organize.local-acknowledged",
   AI_OLLAMA_HOST_DEFAULT: "http://localhost:11434",
   AI_OLLAMA_MODEL_DEFAULT: "qwen2.5:1.5b",
+
+  // Remote provider (OpenAI-compatible / Gemini / custom). Ported from OpenTabSort.
+  // Off/local/ollama never send data off-device; these engines do, and only after
+  // the user ticks AI_PROVIDER_CONSENT_PREF (see modules/provider-readiness.mjs).
+  AI_PROVIDER_CONSENT_PREF: "extensions.zen-auto-organize.ai-provider-consent",
+  AI_OPENAI_ENDPOINT_PREF: "extensions.zen-auto-organize.ai-openai-endpoint",
+  AI_OPENAI_API_KEY_PREF: "extensions.zen-auto-organize.ai-openai-api-key",
+  AI_OPENAI_MODEL_PREF: "extensions.zen-auto-organize.ai-openai-model",
+  AI_GEMINI_API_KEY_PREF: "extensions.zen-auto-organize.ai-gemini-api-key",
+  AI_GEMINI_MODEL_PREF: "extensions.zen-auto-organize.ai-gemini-model",
+  AI_CUSTOM_ENDPOINT_PREF: "extensions.zen-auto-organize.ai-custom-endpoint",
+  AI_CUSTOM_API_KEY_PREF: "extensions.zen-auto-organize.ai-custom-api-key",
+  AI_CUSTOM_MODEL_PREF: "extensions.zen-auto-organize.ai-custom-model",
+  AI_CUSTOM_FORMAT_PREF: "extensions.zen-auto-organize.ai-custom-format",
 
   // Local-AI thresholds. The smart-tab-embedding model's similarity scores are
   // compressed into a narrow band — correct picks land around 0.25-0.45 raw —

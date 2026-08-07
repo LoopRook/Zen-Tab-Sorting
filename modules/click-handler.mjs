@@ -17,6 +17,7 @@ import {
 import { runPass1, applyPass1, matchesDomain } from "./pass1.mjs";
 import { runPass2, runPass2Fresh, applyPass2 } from "./ai.mjs";
 import { checkOllamaReady, reportOllamaError, normalizeOllamaHost, runPass2Ollama, runPass2OllamaFresh, classifyExistingGroupsBatch, proposeTitleTermPatches } from "./ollama.mjs";
+import { runPass2Remote, runPass2RemoteFresh } from "./remote-provider.mjs";
 import { showPreviewModal } from "./preview-modal.mjs";
 
 // Module-version stamp so we can confirm the latest copy is loaded in the running window.
@@ -300,6 +301,41 @@ export const handleOrganizeClick = async () => {
             }
             console.log(`${LOG} Ollama Pass 2 took ${Math.round(performance.now() - t0)}ms`);
           }
+        } else if (aiEngine === "openai" || aiEngine === "gemini" || aiEngine === "custom") {
+          // Remote provider (OpenAI-compatible / Gemini / custom). Behaves like
+          // Ollama (existing + new groups) but sends tab metadata off-device.
+          // The readiness check inside remote-provider.mjs bails with a consent
+          // toast and makes NO network request until the user ticks the
+          // data-sending consent pref, so no pre-gate is needed here.
+          const t0 = performance.now();
+          if (isFreshLike) {
+            pass2 = await runPass2RemoteFresh(tabs);
+          } else if (unmatched.length === 0) {
+            pass2 = { assignedToExisting: [], newGroups: [], skipped: [] };
+          } else {
+            pass2 = await runPass2Remote(unmatched, rules);
+            // Same stickiness as the Ollama path: don't let the AI pull a tab
+            // OUT of a user-organized group INTO a brand-new AI-invented group.
+            if (pass2.newGroups?.length) {
+              const displaced = [];
+              for (const g of pass2.newGroups) {
+                const stays = [];
+                for (const t of g.tabs) {
+                  if (t.currentGroup) displaced.push(t);
+                  else stays.push(t);
+                }
+                g.tabs = stays;
+              }
+              pass2.newGroups = pass2.newGroups.filter((g) => g.tabs.length > 0);
+              if (displaced.length > 0) {
+                console.log(
+                  `${LOG} stickiness: kept ${displaced.length} already-grouped tab(s) in place rather than moving to new AI group(s)`
+                );
+                pass2.skipped = [...(pass2.skipped || []), ...displaced];
+              }
+            }
+          }
+          console.log(`${LOG} Remote (${aiEngine}) Pass 2 took ${Math.round(performance.now() - t0)}ms`);
         } else {
           // Local engine. Two sub-paths:
           //   - fresh-categories / identify-only: cluster ALL eligible tabs

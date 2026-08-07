@@ -409,6 +409,9 @@ const normalizeAIEngineValue = (value) => {
   if (v === "off") return "off";
   if (v === "local") return "local";
   if (v === "ollama") return "ollama";
+  if (v === "openai") return "openai";
+  if (v === "gemini") return "gemini";
+  if (v === "custom") return "custom";
   const hasLocal = v.includes("local");
   const hasOllama = v.includes("ollama");
   if (hasLocal && !hasOllama) return "local";
@@ -449,6 +452,12 @@ const readSelectedAIEngineFromDialog = (dialog) => {
 const AI_NEW_GROUP_OPTIONS = {
   local: new Set(["auto-add", "transient", "fresh-categories"]),
   ollama: new Set(["auto-add", "transient", "prompt", "fresh-categories", "identify-only"]),
+  // Remote providers behave like Ollama (LLM: existing + new groups). "identify-only"
+  // (Preview Only) is omitted for now — its in-modal Re-assign button is wired for
+  // local/Ollama only, not the remote drivers.
+  openai: new Set(["auto-add", "transient", "prompt", "fresh-categories"]),
+  gemini: new Set(["auto-add", "transient", "prompt", "fresh-categories"]),
+  custom: new Set(["auto-add", "transient", "prompt", "fresh-categories"]),
 };
 
 const optionValue = (option) =>
@@ -501,6 +510,7 @@ const updateConditionalFields = (dialog) => {
   const prefEngine = getAIEngine();
   const engine = uiEngine || prefEngine;
   const isLocalOrOllama = engine === "local" || engine === "ollama";
+  const isRemote = engine === "openai" || engine === "gemini" || engine === "custom";
 
   const setHidden = (row, hidden) => {
     if (!row) return;
@@ -522,15 +532,37 @@ const updateConditionalFields = (dialog) => {
     ollamaModel: findPrefRow(dialog, CONFIG.AI_OLLAMA_MODEL_PREF),
     ollamaWarmup: findPrefRow(dialog, CONFIG.AI_OLLAMA_WARMUP_PREF),
     localBatchSize: findPrefRow(dialog, CONFIG.AI_LOCAL_BATCH_SIZE_PREF),
+    consent: findPrefRow(dialog, CONFIG.AI_PROVIDER_CONSENT_PREF),
+    openaiEndpoint: findPrefRow(dialog, CONFIG.AI_OPENAI_ENDPOINT_PREF),
+    openaiKey: findPrefRow(dialog, CONFIG.AI_OPENAI_API_KEY_PREF),
+    openaiModel: findPrefRow(dialog, CONFIG.AI_OPENAI_MODEL_PREF),
+    geminiKey: findPrefRow(dialog, CONFIG.AI_GEMINI_API_KEY_PREF),
+    geminiModel: findPrefRow(dialog, CONFIG.AI_GEMINI_MODEL_PREF),
+    customEndpoint: findPrefRow(dialog, CONFIG.AI_CUSTOM_ENDPOINT_PREF),
+    customKey: findPrefRow(dialog, CONFIG.AI_CUSTOM_API_KEY_PREF),
+    customModel: findPrefRow(dialog, CONFIG.AI_CUSTOM_MODEL_PREF),
+    customFormat: findPrefRow(dialog, CONFIG.AI_CUSTOM_FORMAT_PREF),
   };
 
-  setHidden(rows.existingBehavior, engine !== "ollama");
+  setHidden(rows.existingBehavior, engine !== "ollama" && !isRemote);
   setHidden(rows.titleLearning, engine !== "ollama");
-  setHidden(rows.newGroupBehavior, !isLocalOrOllama);
+  setHidden(rows.newGroupBehavior, engine === "off");
   setHidden(rows.ollamaHost,        engine !== "ollama");
   setHidden(rows.ollamaModel,       engine !== "ollama");
   setHidden(rows.ollamaWarmup,      engine !== "ollama");
   setHidden(rows.localBatchSize,    !isLocalOrOllama);
+  // Remote provider rows — show the consent gate for any remote engine, and only
+  // the selected provider's endpoint/key/model fields.
+  setHidden(rows.consent,        !isRemote);
+  setHidden(rows.openaiEndpoint, engine !== "openai");
+  setHidden(rows.openaiKey,      engine !== "openai");
+  setHidden(rows.openaiModel,    engine !== "openai");
+  setHidden(rows.geminiKey,      engine !== "gemini");
+  setHidden(rows.geminiModel,    engine !== "gemini");
+  setHidden(rows.customEndpoint, engine !== "custom");
+  setHidden(rows.customKey,      engine !== "custom");
+  setHidden(rows.customModel,    engine !== "custom");
+  setHidden(rows.customFormat,   engine !== "custom");
   setNewGroupOptionsForEngine(dialog, engine);
   for (const prefName of DROPDOWN_PREFS) syncCustomDropdown(dialog, prefName);
   alignSettingRows(dialog);
