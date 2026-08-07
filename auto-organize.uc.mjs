@@ -1,4 +1,4 @@
-// Zen Tab Wand — entry point.
+// Zen Tab Sorting — entry point.
 // Loaded by Sine in both `chrome://browser/content/browser.xhtml` (the main browser
 // window) and `about:preferences*` (the settings page). Branches on window.location
 // to wire the right submodules in each context.

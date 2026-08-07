@@ -1,4 +1,4 @@
-// Zen Tab Wand — AI grouping preview modal.
+// Zen Tab Sorting — AI grouping preview modal.
 //
 // Interactive modal that lets the user review the AI's proposed groupings
 // before they're applied. Used both for Preview Only (identify-only) and as a

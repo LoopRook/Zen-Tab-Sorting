@@ -1,4 +1,4 @@
-// Zen Tab Wand — constants, color palette, basic helpers.
+// Zen Tab Sorting — constants, color palette, basic helpers.
 // Loaded by every other module. Holds no runtime state.
 //
 // Chrome globals this codebase relies on (provided by Firefox/Zen, NOT imported):
@@ -10,12 +10,12 @@
 //   document.createXULElement(tag) — create a XUL element (vs HTML).
 // See docs/chrome-globals.md for a longer reference.
 
-export const LOG = "[ZenTabWand]";
+export const LOG = "[ZenTabSort]";
 
 // Build tag — mirrors theme.json's `version` for shipped releases, and gets a
 // `+tag.N` suffix for in-progress iterative builds so the Browser Console
 // reveals which build is actually running (vs. a stale module cache).
-export const BUILD_VERSION = "1.0.4";
+export const BUILD_VERSION = "2.0.0";
 
 export const CONFIG = {
   // Init polling — wait for gBrowser/gZenWorkspaces/separator to appear at startup.
@@ -39,7 +39,7 @@ export const CONFIG = {
   // the Sine mod entry in mods.json.
   BUTTON_ID: "tab-wand-button",
   COMMAND_ID: "cmd_zenAutoOrganize",
-  MOD_ID: "zen-tab-wand",
+  MOD_ID: "zen-tab-sorting",
 
   RULES_PREF: "extensions.zen-auto-organize.rules-json",
   SKIP_DOMAINS_PREF: "extensions.zen-auto-organize.skip-domains-json",
@@ -94,8 +94,8 @@ export const CONFIG = {
   AI_LOCAL_CONFIRM_THRESHOLD: 500,      // unmatched count above which a confirmation modal is shown before Pass 2
 
   // chrome:// URLs served by Sine from this mod's directory.
-  RULES_URL: "chrome://sine/content/zen-tab-wand/rules.json",
-  CSS_URL: "chrome://sine/content/zen-tab-wand/userChrome.css",
+  RULES_URL: "chrome://sine/content/zen-tab-sorting/rules.json",
+  CSS_URL: "chrome://sine/content/zen-tab-sorting/userChrome.css",
 
   // Color picker popover: gap (px) between the popover and its swatch anchor.
   POPOVER_GAP_PX: 8,

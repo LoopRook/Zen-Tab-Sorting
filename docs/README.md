@@ -1,4 +1,4 @@
-# Zen Tab Wand — Documentation
+# Zen Tab Sorting — Documentation
 
 A Zen Browser Sine mod that auto-organizes tabs into groups using two passes:
 

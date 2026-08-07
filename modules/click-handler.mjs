@@ -1,4 +1,4 @@
-// Zen Tab Wand — tidy-button click orchestrator.
+// Zen Tab Sorting — tidy-button click orchestrator.
 // Sequences: wiggle → consolidate → load rules → dissolve stale → enumerate tabs
 //            → Pass 1 → apply → ungrouped-to-top → sync colors.
 

@@ -1,8 +1,8 @@
 {
-  "id": "zen-tab-wand",
-  "name": "Zen Tab Wand",
-  "description": "One-click tab tidy. Sorts open tabs into groups using your domain rules first, then optionally an AI engine (built-in or Ollama) for everything the rules miss.",
-  "homepage": "https://github.com/flantig/Zen-Tab-Wand",
+  "id": "zen-tab-sorting",
+  "name": "Zen Tab Sorting",
+  "description": "Rules-first tab sorting for Zen Browser: domain and title rules first, then optional AI (built-in, Ollama, or a remote OpenAI-compatible/Gemini/custom provider) for the rest.",
+  "homepage": "https://github.com/LoopRook/Zen-Tab-Sorting",
   "supportsUnload": false,
   "style": {
     "chrome": "userChrome.css"
@@ -16,11 +16,11 @@
       ]
     }
   },
-  "readme": "https://raw.githubusercontent.com/flantig/Zen-Tab-Wand/main/README.md",
-  "image": "https://raw.githubusercontent.com/flantig/Zen-Tab-Wand/main/image.png",
-  "author": "franklinl",
+  "readme": "https://raw.githubusercontent.com/LoopRook/Zen-Tab-Sorting/main/README.md",
+  "image": "https://raw.githubusercontent.com/LoopRook/Zen-Tab-Sorting/main/image.png",
+  "author": "LoopRook, based on Zen Tab Wand by flantig, with remote-provider support from OpenTabSort Zen by nggurbanov",
   "ai": "yes",
-  "version": "1.0.4",
+  "version": "2.0.0",
   "preferences": "preferences.json",
   "tags": [
     "Tabs",
@@ -30,6 +30,6 @@
     "Ollama"
   ],
   "createdAt": "2026-05-15",
-  "updatedAt": "2026-06-22",
+  "updatedAt": "2026-08-07",
   "fork": ["zen"]
 }

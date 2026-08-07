@@ -6,7 +6,7 @@ Holds every magic value the rest of the codebase references. No runtime state, n
 
 | Name | Type | Purpose |
 |---|---|---|
-| `LOG` | string | Prefix for all console messages (`"[ZenTabWand]"`) |
+| `LOG` | string | Prefix for all console messages (`"[ZenTabSort]"`) |
 | `BUILD_VERSION` | string | Mirrors theme.json's `version` for shipped releases (e.g. `"1.0.1"`); for in-progress iterative builds gets a `+tag.N` suffix so the Browser Console reveals which build is loaded vs. a stale module cache. |
 | `CONFIG` | object | Pref names, IDs, polling intervals, chrome:// URLs, AI-tuning constants |
 | `ZEN_UNSET_LABEL` | string | U+200B placeholder Zen uses for new unnamed tab-groups |
@@ -46,7 +46,7 @@ RULES_URL                     // chrome:// path to rules.json (legacy fallback)
 CSS_URL                       // chrome:// path to userChrome.css (fetched into prefs scope)
 BUTTON_ID                     // toolbar wand button DOM id ("tab-wand-button")
 COMMAND_ID                    // XUL command id for the button
-MOD_ID                        // "zen-tab-wand" — kept for historical/debug use;
+MOD_ID                        // "zen-tab-sorting" — kept for historical/debug use;
                               // dialog detection lives in prefs-ui.mjs's
                               // isOurDialog() which keys off the "Group Rules"
                               // separator label, not this id.
@@ -62,4 +62,4 @@ HEX_PALE_MIX_PERCENT          // 20
 POPOVER_GAP_PX                // 8 — popover offset from its swatch anchor
 ```
 
-> **Note:** the pref-key prefix is `extensions.zen-auto-organize.*`. That's a legacy from the mod's earlier name; we kept it across the rename to `zen-tab-wand` so existing users' rules and settings carry over unchanged.
+> **Note:** the pref-key prefix is `extensions.zen-auto-organize.*`. That's a legacy from the mod's earlier name; we kept it across the rename to `zen-tab-sorting` so existing users' rules and settings carry over unchanged.

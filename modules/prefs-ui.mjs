@@ -1,4 +1,4 @@
-// Zen Tab Wand — preferences-context setup.
+// Zen Tab Sorting — preferences-context setup.
 // Watches for Sine's per-mod settings dialog and injects the rules editor widget
 // after the "Group Rules" separator. Also injects our stylesheet (Sine's chrome CSS
 // pipeline doesn't reach about:preferences scope).
@@ -15,7 +15,7 @@ import {
 } from "./widget.mjs";
 import { fetchZenColorsFromBrowser } from "./color-picker.mjs";
 
-console.log(`[ZenTabWand] prefs-ui.mjs loaded — v${BUILD_VERSION}`);
+console.log(`[ZenTabSort] prefs-ui.mjs loaded — v${BUILD_VERSION}`);
 
 let settingsObserver = null;
 
@@ -630,7 +630,7 @@ const maybeShowOllamaWarning = () => {
   const li3 = h("li");
   li3.appendChild(h("strong", { text: "Going bigger? " }));
   const link = h("a", { class: "zao-warning-link", text: "See the model guide" });
-  link.href = "https://github.com/flantig/Zen-Tab-Wand";
+  link.href = "https://github.com/LoopRook/Zen-Tab-Sorting";
   link.target = "_blank";
   link.rel = "noopener noreferrer";
   li3.appendChild(link);
@@ -669,7 +669,7 @@ const maybeShowLocalWarning = () => {
   li3.appendChild(h("strong", { text: "Want stronger results? " }));
   li3.appendChild(document.createTextNode("Try Ollama for cluster-and-name. "));
   const link = h("a", { class: "zao-warning-link", text: "See the model guide" });
-  link.href = "https://github.com/flantig/Zen-Tab-Wand";
+  link.href = "https://github.com/LoopRook/Zen-Tab-Sorting";
   link.target = "_blank";
   link.rel = "noopener noreferrer";
   li3.appendChild(link);

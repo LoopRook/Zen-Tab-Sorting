@@ -1,4 +1,4 @@
-// Zen Tab Wand — tiny no-dependency emoji picker for rule icons.
+// Zen Tab Sorting — tiny no-dependency emoji picker for rule icons.
 
 import { CONFIG, h } from "./config.mjs";
 import { findCustomIcon, readCustomIconsPref } from "./custom-icons.mjs";

@@ -1,4 +1,4 @@
-// Zen Tab Wand — local custom icon library stored in prefs as data URLs.
+// Zen Tab Sorting — local custom icon library stored in prefs as data URLs.
 
 import { CONFIG, LOG } from "./config.mjs";
 

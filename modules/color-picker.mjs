@@ -1,4 +1,4 @@
-// Zen Tab Wand — color picker UI used inside the settings widget rows.
+// Zen Tab Sorting — color picker UI used inside the settings widget rows.
 // Includes the swatch, the popover with 9 Zen presets + a hex input, and a runtime
 // fetch of Zen's actual rendered palette so swatches match the live theme.
 

@@ -1,4 +1,4 @@
-// Zen Tab Wand — browser-context UI: tidy button, command, workspace hooks.
+// Zen Tab Sorting — browser-context UI: tidy button, command, workspace hooks.
 
 import { CONFIG, LOG } from "./config.mjs";
 import { domCache } from "./tabs.mjs";

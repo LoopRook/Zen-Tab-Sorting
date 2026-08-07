@@ -1,4 +1,4 @@
-// Zen Tab Wand — Pass 1: deterministic domain → group matching.
+// Zen Tab Sorting — Pass 1: deterministic domain → group matching.
 // Pure logic over rules + tab info; applyPass1 mutates the DOM via gBrowser APIs.
 
 import { LOG } from "./config.mjs";

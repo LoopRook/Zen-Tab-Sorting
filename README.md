@@ -1,4 +1,4 @@
-# Zen Tab Wand
+# Zen Tab Sorting
 
 A one-click tab tidier for [Zen Browser](https://zen-browser.app), installed via the [Sine](https://github.com/CosmoCreeper/Sine) mod loader. Click the wand in your toolbar, and your open tabs get sorted into groups.
 
@@ -35,7 +35,7 @@ If I have no groups and a lot of tabs, I'll run the ai model to create a good ap
 
 ## Installing
 
-In Zen → Sine → Marketplace, search for "Zen Tab Wand" and install. Or sideload by dropping the source into your Sine mods folder.
+In Zen → Sine → Marketplace, search for "Zen Tab Sorting" and install. Or sideload by dropping the source into your Sine mods folder.
 
 After install, a wand icon appears in your toolbar's workspace separator. Left-click the icon to sort.
 
@@ -43,7 +43,7 @@ After install, a wand icon appears in your toolbar's workspace separator. Left-c
 
 ## Quick start
 
-1. Open **Settings → Zen Tab Wand**.
+1. Open **Settings → Zen Tab Sorting**.
 2. Edit the **Group Rules** table to your liking. Each group needs a name and one or more match chips: `@` chips for domains (e.g. `github.com`) and `T` chips for page-title keywords. Colors, gradients, and icons are optional.
 
 ![Choosing to filter by domain or title](docs/images/domain-title.png)
@@ -51,7 +51,7 @@ After install, a wand icon appears in your toolbar's workspace separator. Left-c
 3. Click the **wand button** in the toolbar. Your matching tabs are sorted instantly.
 4. (Optional) Pick an **AI engine** for tabs the rules don't cover — see below.
 
-![Zen Tab Wand settings panel](docs/images/settings-panel.png)
+![Zen Tab Sorting settings panel](docs/images/settings-panel.png)
 
 Fresh installs start with a small set of editable default groups: Calendar, AI Tools, Dev, Shopping, Social, Music, and Search. Existing user rules are not overwritten when these defaults change.
 
@@ -116,7 +116,7 @@ Ollama runs entirely on your machine — no API keys, no cloud, no per-token cos
 
 **Finishing up (all platforms)**
 
-1. In Zen → Settings → Zen Tab Wand → **AI Sorting**, set **AI engine** to `Ollama`.
+1. In Zen → Settings → Zen Tab Sorting → **AI Sorting**, set **AI engine** to `Ollama`.
 2. The default **Ollama host** (`http://localhost:11434`) and **Ollama model** (`qwen2.5:1.5b`) should already match — change the model name if you pulled something different.
 3. Click the wand. The first click after browser launch takes a few seconds while the model loads into VRAM; subsequent clicks are fast.
 
@@ -201,8 +201,14 @@ Inside the settings panel under **Backup & Restore**:
 
 ## Reporting bugs
 
-Open an issue on the source repository. Helpful to include the **Browser Console** log (Ctrl+Shift+J) around the time of the bug — the mod logs detailed diagnostics with the prefix `[ZenTabWand]`.
+Open an issue on the source repository. Helpful to include the **Browser Console** log (Ctrl+Shift+J) around the time of the bug — the mod logs detailed diagnostics with the prefix `[ZenTabSort]`.
+
+## Credits
+
+Zen Tab Sorting is based on [Zen Tab Wand](https://github.com/flantig/Zen-Tab-Wand) by flantig (MIT-licensed), whose full rules editor — domain and title rules, custom icons, gradients, matching priority, and the local/Ollama AI modes — is the product base here. The remote-provider support (OpenAI-compatible, Gemini, and custom endpoints, with a data-sending consent gate) is ported from [OpenTabSort Zen](https://github.com/nggurbanov/OpenTabSort-Zen) by nggurbanov. The `extensions.zen-auto-organize.*` preference prefix is intentionally retained so existing rules and settings carry over.
+
+> **Install only one Zen-Tab-Wand-family mod at a time.** Zen Tab Sorting shares Zen Tab Wand's `#tab-wand-button`, `cmd_zenAutoOrganize` command, and `extensions.zen-auto-organize.*` prefs, so running it alongside Zen Tab Wand (or OpenTabSort Zen) makes the copies clobber each other. Remove the others first.
 
 ## License
 
-MIT.
+MIT. Original Zen Tab Wand copyright remains in `LICENSE`.
