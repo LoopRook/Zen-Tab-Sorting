@@ -46,7 +46,10 @@ tab-group:not([split-view-group]) {
     color-mix(in srgb, var(--zen-primary-color, currentColor) 60%, black),
     color-mix(in srgb, var(--zen-colors-primary, currentColor) 20%, var(--toolbox-textcolor, currentColor)));
 
-  .tab-group-label-container {
+  /* Scoped to the expanded state: current Zen (Aug 2026 "folders" update) has
+     its own collapsed-group rendering, and forcing our 36px row geometry onto
+     it produced cramped, outlined boxes. Collapsed groups render natively. */
+  &:not([collapsed]) .tab-group-label-container {
     height: 36px !important;
     margin: 0 !important;
     padding: 0 10px 0 0 !important;
@@ -145,6 +148,89 @@ tab-group:not([split-view-group]) {
       width: 2px;
       pointer-events: none !important;
       background: var(--tab-group-color);
+    }
+  }
+}
+
+/* --- Collapsed groups: flat label + colored pip.
+   Firefox paints a collapsed group's label as a filled "chip" — see
+   `.tab-group-label` in tabs.css: `background-color: var(--tab-group-background-color)`
+   plus a highlight `box-shadow` ring — which reads as a heavy colored box with a
+   border in Zen's vertical sidebar. Strip the fill and the ring, and mark the
+   group with a small dot in its own color to the left of the name instead.
+
+   `--tab-group-background-color` is the same variable Firefox uses to paint that
+   chip, so the pip always matches the group's assigned color; `--tab-group-color`
+   is the fallback (Zen's zen-folder rules blank that one out on the label
+   container, hence the order).
+
+   Scoped to the expanded sidebar: when the sidebar is icon-only the label is
+   hidden and the colored chip is the ONLY affordance for the group, so it is
+   deliberately left native there. */
+:root[zen-sidebar-expanded] :is(tab-group, zen-folder)[collapsed]:not([split-view-group]) {
+  .tab-group-label {
+    position: relative;
+    background: transparent !important;
+    background-color: transparent !important;
+    color: var(--tab-selected-textcolor) !important;
+    box-shadow: none !important;
+    outline: none !important;
+    border-radius: var(--border-radius-medium, 6px) !important;
+    /* Room for the pip: left inset + the pip itself + a gap, so the text keeps
+       clear of the dot at any configured size. */
+    padding-inline-start: calc(var(--zao-pip-size, 8px) + 10px) !important;
+
+    &:hover {
+      background-color: transparent !important;
+    }
+
+    &::before {
+      content: "";
+      position: absolute;
+      inset-inline-start: 4px;
+      top: 50%;
+      transform: translateY(-50%);
+      /* Size and shape come from the Look & Feel prefs — browser-hooks.mjs
+         publishes them onto the document root (applyPipStyle). The fallbacks
+         here are the original circle, used before that first runs. */
+      width: var(--zao-pip-size, 8px);
+      height: var(--zao-pip-size, 8px);
+      border-radius: var(--zao-pip-radius, 50%);
+      background: var(--tab-group-background-color, var(--tab-group-color));
+      pointer-events: none;
+    }
+  }
+
+  /* Keep a hover affordance now that the fill is gone. */
+  .tab-group-label-container:hover {
+    background-color: var(--tab-hover-background-color, color-mix(in srgb, currentColor 8%, transparent)) !important;
+    border-radius: var(--border-radius-medium, 6px) !important;
+  }
+}
+
+/* Open groups get the same marker at a reduced size, so a group reads as "open"
+   at a glance without losing its color. Governed by the "When a group is open"
+   setting — browser-hooks.mjs resolves it to these properties, and sets the size
+   to 0 / display none for the "No marker" choice (how the open state looked
+   before this was configurable). Zen's tab-group renders no icon of its own —
+   just a label container and label — so there is nothing here to collide with. */
+:root[zen-sidebar-expanded] :is(tab-group, zen-folder):not([collapsed]):not([split-view-group]) {
+  .tab-group-label {
+    position: relative;
+    padding-inline-start: var(--zao-pip-open-pad, 4px) !important;
+
+    &::before {
+      content: "";
+      display: var(--zao-pip-open-display, none);
+      position: absolute;
+      inset-inline-start: 4px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: var(--zao-pip-open-size, 0);
+      height: var(--zao-pip-open-size, 0);
+      border-radius: var(--zao-pip-open-radius, 50%);
+      background: var(--tab-group-background-color, var(--tab-group-color));
+      pointer-events: none;
     }
   }
 }
@@ -309,6 +395,28 @@ tab-group:not([split-view-group]) {
   padding: 5px 12px !important;
   font-size: 12px !important;
   cursor: pointer !important;
+}
+
+/* "Test connection" row under the Remote Provider Settings separator.
+   Button reuses .zao-backup-btn; the status span shows the probe outcome. */
+.zao-provider-test {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  margin: 8px 0 !important;
+  padding: 0 12px !important;
+}
+.zao-provider-test-status {
+  font-size: 12px;
+  opacity: 0.85;
+}
+.zao-provider-test-status[data-state="ok"] {
+  color: light-dark(#1a7f37, #57d97a);
+  opacity: 1;
+}
+.zao-provider-test-status[data-state="err"] {
+  color: light-dark(#b42318, #ff8d80);
+  opacity: 1;
 }
 
 .zao-backup-btn:hover {

@@ -4,7 +4,7 @@
 // pipeline doesn't reach about:preferences scope).
 
 import { CONFIG, LOG, DEFAULT_RULES, BUILD_VERSION, h } from "./config.mjs";
-import { readRulesPref, writeRulesPref, getAIEngine } from "./rules.mjs";
+import { readRulesPref, writeRulesPref, getAIEngine, getPipShape } from "./rules.mjs";
 import {
   buildRulesEditor,
   buildSkipDomainsEditor,
@@ -13,6 +13,7 @@ import {
   teardownSkipPrefObserver,
 } from "./widget.mjs";
 import { fetchZenColorsFromBrowser } from "./color-picker.mjs";
+import { testProviderConnection } from "./remote-provider.mjs";
 
 console.log(`[ZenTabSort] prefs-ui.mjs loaded — v${BUILD_VERSION}`);
 
@@ -222,6 +223,13 @@ const updateConditionalFields = (dialog) => {
   setHidden(findPrefRow(dialog, CONFIG.AI_CUSTOM_API_KEY_PREF),       engine !== "custom");
   setHidden(findPrefRow(dialog, CONFIG.AI_CUSTOM_MODEL_PREF),         engine !== "custom");
   setHidden(findPrefRow(dialog, CONFIG.AI_CUSTOM_FORMAT_PREF),        engine !== "custom");
+  setHidden(dialog.querySelector(".zao-provider-test"),               !isRemoteProvider);
+
+  // Each pip shape keeps its own size, so only surface the field for the shape
+  // currently selected — the other one stays stored, just out of the way.
+  const pipShape = getPipShape();
+  setHidden(findPrefRow(dialog, CONFIG.PIP_SIZE_CIRCLE_PREF), pipShape !== "circle");
+  setHidden(findPrefRow(dialog, CONFIG.PIP_SIZE_SQUARE_PREF), pipShape !== "square");
 };
 
 // First-time AI engine warning modals.
@@ -379,7 +387,8 @@ const maybeShowLocalWarning = () => {
   });
 };
 
-// Re-run the show/hide pass whenever the engine pref flips. One observer per
+// Re-run the show/hide pass whenever the engine pref flips, or the pip shape
+// changes (which swaps in that shape's size field). One observer per
 // preferences-window context, torn down with the rest on window unload.
 let enginePrefObserver = null;
 const setupEnginePrefObserver = () => {
@@ -387,6 +396,15 @@ const setupEnginePrefObserver = () => {
   enginePrefObserver = {
     observe(_subject, topic, data) {
       if (topic !== "nsPref:changed") return;
+      if (data === CONFIG.PIP_SHAPE_PREF) {
+        for (const d of document.querySelectorAll(".sineItemPreferenceDialog")) {
+          if (isOurDialog(d)) {
+            updateConditionalFields(d);
+            break;
+          }
+        }
+        return;
+      }
       if (data !== CONFIG.AI_ENGINE_PREF) return;
       const engine = getAIEngine();
       console.log(`${LOG} [ollama-warning] engine pref changed → "${engine}"`);
@@ -403,11 +421,13 @@ const setupEnginePrefObserver = () => {
     },
   };
   Services.prefs.addObserver(CONFIG.AI_ENGINE_PREF, enginePrefObserver);
+  Services.prefs.addObserver(CONFIG.PIP_SHAPE_PREF, enginePrefObserver);
 };
 
 const teardownEnginePrefObserver = () => {
   if (!enginePrefObserver) return;
   try { Services.prefs.removeObserver(CONFIG.AI_ENGINE_PREF, enginePrefObserver); } catch {}
+  try { Services.prefs.removeObserver(CONFIG.PIP_SHAPE_PREF, enginePrefObserver); } catch {}
   enginePrefObserver = null;
 };
 
@@ -428,6 +448,50 @@ const insertAfter = (parent, newNode, refNode) => {
   } else {
     parent.insertBefore(newNode, parent.firstChild);
   }
+};
+
+// "Test connection" row for the Remote Provider Settings section. One click
+// fires a minimal probe through the SAME readiness gate + request path as a
+// real sort, then shows the outcome inline — so key/model problems surface as
+// the exact provider error instead of a silent no-op sort.
+const buildProviderTestSection = () => {
+  const container = h("div", { class: "zao-provider-test" });
+  const button = h("button", { text: "Test connection" });
+  button.className = "zao-backup-btn";
+  const status = h("span", { class: "zao-provider-test-status" });
+  container.append(button, status);
+
+  button.addEventListener("click", async () => {
+    button.disabled = true;
+    status.textContent = "Testing…";
+    status.removeAttribute("data-state");
+    try {
+      const result = await testProviderConnection();
+      if (result.ok) {
+        status.textContent = "Connected — provider replied.";
+        status.dataset.state = "ok";
+      } else if (result.reason === "consent_required") {
+        status.textContent = "Consent required — tick the data-sending checkbox above first.";
+        status.dataset.state = "err";
+      } else if (result.reason === "missing_required_config") {
+        status.textContent = `Missing: ${(result.missingFields || []).join(", ")}.`;
+        status.dataset.state = "err";
+      } else if (result.reason === "provider_disabled") {
+        status.textContent = "Select a remote AI engine (OpenAI-compatible, Gemini, or Custom) first.";
+        status.dataset.state = "err";
+      } else {
+        status.textContent = `Failed: ${result.error || result.reason}`;
+        status.dataset.state = "err";
+      }
+    } catch (e) {
+      status.textContent = `Failed: ${e?.message || e}`;
+      status.dataset.state = "err";
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  return container;
 };
 
 const performInject = (dialog) => {
@@ -458,6 +522,7 @@ const performInject = (dialog) => {
   insertAfter(content, rulesEditor, findSeparatorContainer(dialog, "Group Rules"));
   insertAfter(content, skipEditor, findSeparatorContainer(dialog, "Skip Domains"));
   insertAfter(content, backupSection, findSeparatorContainer(dialog, "Backup & Restore"));
+  insertAfter(content, buildProviderTestSection(), findSeparatorContainer(dialog, "Remote Provider Settings"));
 
   tagSeparatorContainers(dialog);
   injectSectionDescriptions(dialog);

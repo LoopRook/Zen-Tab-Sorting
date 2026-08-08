@@ -48,8 +48,8 @@ const runChecks = async (openRoot, oldRoot) => {
   };
   // The sibling NeuroSort checkout is optional. When it's missing (any machine
   // other than the original author's), the cross-project parity assertions are
-  // skipped rather than failed; every OpenTabSort/Zen-Tab-Sorting-side check
-  // still runs, so this stays a meaningful gate locally.
+  // skipped rather than failed; every local-side check still runs, so this
+  // stays a meaningful gate.
   const oldReadme = readOptional(oldRoot, "README.md");
   const oldPreferences = readOptional(oldRoot, "preferences.json");
   const oldRootAvailable = oldReadme !== null && oldPreferences !== null;

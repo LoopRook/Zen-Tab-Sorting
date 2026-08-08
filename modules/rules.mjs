@@ -2,7 +2,7 @@
 // Reads/writes the rules JSON pref, validates rules.json file contents, and exposes
 // the precedence chain (pref > file > built-in defaults).
 
-import { CONFIG, DEFAULT_RULES, LOG, ZEN_COLOR_NAMES, isValidHex } from "./config.mjs";
+import { CONFIG, DEFAULT_RULES, LOG, ZEN_COLOR_NAMES, isValidHex, normalizePipSize, pipSizePrefFor } from "./config.mjs";
 import { normalizeSortingMode } from "./sorting-mode.mjs";
 
 /**
@@ -164,6 +164,49 @@ export const isMinimalStyle = () => {
     return Services.prefs.getBoolPref(CONFIG.MINIMAL_STYLE_PREF, false);
   } catch {
     return false;
+  }
+};
+
+// Collapsed-group pip appearance. "circle" (default) or "square" — a rounded
+// square proportioned like the rest of Zen's rounded-square iconography.
+export const getPipShape = () => {
+  try {
+    return Services.prefs.getStringPref(CONFIG.PIP_SHAPE_PREF, "circle") === "square"
+      ? "square"
+      : "circle";
+  } catch {
+    return "circle";
+  }
+};
+
+// What the marker does while the group is open.
+export const getPipOpenBehavior = () => {
+  try {
+    const value = Services.prefs.getStringPref(CONFIG.PIP_OPEN_BEHAVIOR_PREF, "smaller");
+    return value === "same" || value === "hidden" ? value : "smaller";
+  } catch {
+    return "smaller";
+  }
+};
+
+// Pip size in px for a given shape, each shape having its own stored value.
+// Stored as string prefs (Sine has no number control), so parse defensively and
+// clamp — a blank or nonsense value falls back to the default rather than
+// producing an invisible or giant marker.
+//
+// Read order: this shape's pref → the pre-split `pip-size` pref (so a size set
+// before shapes had separate sizes still applies) → the default.
+export const getPipSize = (shape = getPipShape()) => {
+  try {
+    const prefs = Services.prefs;
+    const name = pipSizePrefFor(shape);
+    if (prefs.prefHasUserValue(name)) return normalizePipSize(prefs.getStringPref(name, ""));
+    if (prefs.prefHasUserValue(CONFIG.PIP_SIZE_LEGACY_PREF)) {
+      return normalizePipSize(prefs.getStringPref(CONFIG.PIP_SIZE_LEGACY_PREF, ""));
+    }
+    return CONFIG.PIP_SIZE_DEFAULT;
+  } catch {
+    return CONFIG.PIP_SIZE_DEFAULT;
   }
 };
 

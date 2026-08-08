@@ -23,6 +23,23 @@ const stripMetaPrefix = (s) => s
   .replace(/^\s*(?:new\s+)?(?:category|label|topic|bucket|group)\s*[:\-–]\s*/i, "")
   .trim();
 
+// One-click connectivity probe for the settings dialog's "Test connection"
+// button. Runs the SAME readiness gate as a real sort (consent stays required —
+// a test request still sends data to the provider), then issues a minimal
+// prompt. Returns a plain result object; never throws.
+export const testProviderConnection = async (settings = readProviderSettings(Services.prefs)) => {
+  const readiness = getProviderReadiness(settings);
+  if (!readiness.ok) {
+    return { ok: false, reason: readiness.reason, missingFields: readiness.missingFields || [] };
+  }
+  try {
+    const reply = await providerText(readiness.value, "Reply with the single word: ok", 16);
+    return { ok: true, reply: reply.slice(0, 60) };
+  } catch (e) {
+    return { ok: false, reason: "request_failed", error: e?.message || String(e) };
+  }
+};
+
 export const classifyExistingGroupsRemoteBatch = async (pendingTabs, rules, settings = readProviderSettings(Services.prefs)) => {
   if (!pendingTabs?.length || !rules?.length) return new Map();
   const readiness = getProviderReadiness(settings);
@@ -220,13 +237,31 @@ const extractJsonObjectText = (text) => {
   return raw;
 };
 
+// Resolve which fetch to use. In the about:preferences context (where the
+// "Test connection" button lives) the document's CSP can block fetches to
+// external provider hosts with a bare "NetworkError" — so route requests
+// through the main browser window's fetch instead. In the browser window this
+// resolves to the same fetch as before, and in Node (tests stub
+// globalThis.fetch) Services is undefined so the global is used unchanged.
+const resolveFetch = () => {
+  try {
+    if (typeof Services !== "undefined" && typeof window !== "undefined" &&
+        window.location?.href !== "chrome://browser/content/browser.xhtml") {
+      const win = Services.wm?.getMostRecentWindow?.("navigator:browser");
+      if (win?.fetch) return win.fetch.bind(win);
+    }
+  } catch {}
+  return fetch;
+};
+
 const providerText = async (settings, prompt, maxTokens) => {
   const request = buildProviderRequest(settings, prompt, maxTokens);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), GENERATE_TIMEOUT_MS);
   let response;
   try {
-    response = await fetch(request.url, { ...request.init, signal: controller.signal });
+    const doFetch = resolveFetch();
+    response = await doFetch(request.url, { ...request.init, signal: controller.signal });
   } catch (e) {
     throw new Error(e.name === "AbortError" ? `timeout after ${GENERATE_TIMEOUT_MS}ms` : (e.message || String(e)));
   } finally {

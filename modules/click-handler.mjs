@@ -18,6 +18,7 @@ import { runPass1, applyPass1, matchesDomain } from "./pass1.mjs";
 import { runPass2, runPass2Fresh, applyPass2 } from "./ai.mjs";
 import { checkOllamaReady, reportOllamaError, normalizeOllamaHost, runPass2Ollama, runPass2OllamaFresh, classifyExistingGroupsBatch } from "./ollama.mjs";
 import { runPass2Remote, runPass2RemoteFresh, classifyExistingGroupsRemoteBatch } from "./remote-provider.mjs";
+import { showToast } from "./ui-toast.mjs";
 import { showPreviewModal } from "./preview-modal.mjs";
 import { isFullAIMode, resolveEffectiveSortingMode, resolvePass2ApplyOptions, resolveSortingPlan } from "./sorting-mode.mjs";
 
@@ -240,6 +241,13 @@ export const handleOrganizeClick = async () => {
     // when there's something Pass 1 couldn't place.
     const pass2Input = isFreshLike ? tabs : sortingPlan.tabsForAI;
     const shouldRunPass2 = aiEngine !== "off" && pass2Input.length > 0;
+    // Remote engine selected but nothing left for it: say so. Otherwise "the
+    // provider isn't working" and "rules already sorted everything" are
+    // indistinguishable from the user's side.
+    if (!shouldRunPass2 && pass2Input.length === 0 &&
+        (aiEngine === "openai" || aiEngine === "gemini" || aiEngine === "custom")) {
+      showToast("All tabs matched rules — remote AI had nothing to sort.");
+    }
     if (shouldRunPass2) {
       const inputCount = pass2Input.length;
       const inputLabel = isFreshLike ? "ALL eligible tab(s)" : sortingPlan.aiInputLabel;
