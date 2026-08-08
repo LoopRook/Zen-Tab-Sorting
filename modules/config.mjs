@@ -15,7 +15,7 @@ export const LOG = "[ZenTabSort]";
 // Build tag — mirrors theme.json's `version` for shipped releases, and gets a
 // `+tag.N` suffix for in-progress iterative builds so the Browser Console
 // reveals which build is actually running (vs. a stale module cache).
-export const BUILD_VERSION = "1.3.1";
+export const BUILD_VERSION = "1.4.0";
 
 export const CONFIG = {
   // Init polling — wait for gBrowser/gZenWorkspaces/separator to appear at startup.

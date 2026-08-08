@@ -152,6 +152,58 @@ tab-group:not([split-view-group]) {
   }
 }
 
+/* --- Collapsed groups: flat label + colored pip.
+   Firefox paints a collapsed group's label as a filled "chip" — see
+   `.tab-group-label` in tabs.css: `background-color: var(--tab-group-background-color)`
+   plus a highlight `box-shadow` ring — which reads as a heavy colored box with a
+   border in Zen's vertical sidebar. Strip the fill and the ring, and mark the
+   group with a small dot in its own color to the left of the name instead.
+
+   `--tab-group-background-color` is the same variable Firefox uses to paint that
+   chip, so the pip always matches the group's assigned color; `--tab-group-color`
+   is the fallback (Zen's zen-folder rules blank that one out on the label
+   container, hence the order).
+
+   Scoped to the expanded sidebar: when the sidebar is icon-only the label is
+   hidden and the colored chip is the ONLY affordance for the group, so it is
+   deliberately left native there. */
+:root[zen-sidebar-expanded] :is(tab-group, zen-folder)[collapsed]:not([split-view-group]) {
+  .tab-group-label {
+    position: relative;
+    background: transparent !important;
+    background-color: transparent !important;
+    color: var(--tab-selected-textcolor) !important;
+    box-shadow: none !important;
+    outline: none !important;
+    border-radius: var(--border-radius-medium, 6px) !important;
+    /* Room for the pip; matches the icon-container offset used when expanded. */
+    padding-inline-start: 18px !important;
+
+    &:hover {
+      background-color: transparent !important;
+    }
+
+    &::before {
+      content: "";
+      position: absolute;
+      inset-inline-start: 4px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--tab-group-background-color, var(--tab-group-color));
+      pointer-events: none;
+    }
+  }
+
+  /* Keep a hover affordance now that the fill is gone. */
+  .tab-group-label-container:hover {
+    background-color: var(--tab-hover-background-color, color-mix(in srgb, currentColor 8%, transparent)) !important;
+    border-radius: var(--border-radius-medium, 6px) !important;
+  }
+}
+
 /* --- Toolbar button: wiggle the wand on click --- */
 @keyframes zao-wand-wiggle {
   0%   { transform: rotate(0deg); }
