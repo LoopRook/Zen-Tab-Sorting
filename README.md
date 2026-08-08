@@ -1,105 +1,85 @@
 # Zen Tab Sorting
 
-Zen Tab Sorting is a rules-first, hybrid, or full-AI tab organizer for Zen Browser and Sine.
-It is based on [Zen Tab Wand](https://github.com/flantig/Zen-Tab-Wand) and keeps the parts that made that project better than NeuroSort: a native wand button, editable domain rules, skip domains, backup and restore, tab context-menu rule growth, local AI, Ollama, Plan Mode, and persistent collapsed groups.
-
-This fork adds the pieces NeuroSort did better: explicit provider choice, privacy gates before remote AI, a validation and test harness, release metadata checks, and comparison evidence so the older NeuroSort implementation does not keep hidden advantages.
-
-## What Makes This Fork Different
-
-- **Rule-first workflow stays primary.** Domains and skip domains handle the repeatable work. AI is an optional second pass.
-- **Local by default.** The built-in Firefox ML engine and Ollama stay on your machine.
-- **Remote providers are explicit.** OpenAI-compatible, Gemini, and custom endpoints are available only when selected and consented to.
-- **Safety harness.** Manifest, preferences, syntax, provider, and security validators are part of `npm run check`.
-- **Sine identity is forked.** The public mod id is `zen-tab-sorting`; repository links point to `LoopRook/Zen-Tab-Sorting`.
+A tab organizer for [Zen Browser](https://zen-browser.app), installed through the [Sine](https://github.com/CosmoCreeper/Sine) mod loader. You define domain rules, click the wand button in the workspace separator, and your open tabs drop into groups. An AI pass is available for whatever the rules don't cover, and it stays off until you turn it on.
 
 ## Installing
 
-In Zen Browser, open Sine and add this repository:
+In Zen, open Sine and add this repository:
 
 ```text
 LoopRook/Zen-Tab-Sorting
 ```
 
-After install, a wand button appears in the workspace separator. Left-click sorts the current workspace. Right-click tabs to add their hostname to a rule or skip list.
+There's one setting to change first. Sine only runs a mod's JavaScript if the mod came from its official store, unless you enable "Enable installing JS from unofficial sources" in Sine's settings. Without it this mod's stylesheet loads but none of its behavior does, so you get no wand button and no settings editors. Turn it on, restart Zen, then install.
 
-## How Sorting Works
+Don't run this alongside Zen Tab Wand or OpenTabSort Zen. All three share the same toolbar button, command, and preference keys, so two of them installed at once will fight over the same DOM.
 
-1. **Domain rules first.** You define groups in settings, such as `Dev` matching `github.com` and `stackoverflow.com`.
-2. **Skip domains.** Matching tabs are ejected from groups and parked at the top.
-3. **Optional AI fallback.** Local, Ollama, OpenAI-compatible, Gemini, or custom provider modes can classify what rules missed.
-4. **Plan Mode.** For AI-created groups, you can preview the plan before applying.
+After installing, a wand button appears in the workspace separator. Left-click sorts the current workspace. Right-click any tab to add its hostname to a rule or to the skip list.
 
-## Provider Modes
+## How sorting works
 
-| Engine | Network behavior | Setup |
+1. Domain rules run first. You define groups in settings, say a `Dev` group matching `github.com` and `stackoverflow.com`, and every open tab whose hostname matches lands in that group.
+2. Skip domains are pulled out. Anything matching the skip list gets ejected from its group and parked at the top of the workspace, on every click.
+3. The AI pass handles the rest, if you've enabled one. It can file leftover tabs into existing groups or invent new ones.
+
+Three sorting modes control how much work the AI does. Rules first shows it only what the rules missed, hybrid does the same but re-runs on every click, and full AI ignores your rules and re-clusters everything.
+
+When the AI creates new groups you can have it save them as rules, create them once without saving, open Zen's rename dialog for each, or preview the whole plan first and pick what to keep.
+
+## AI engines
+
+| Engine | Where the data goes | What you need |
 | --- | --- | --- |
-| Off | No AI request | None |
-| Local | On-device Firefox ML | None |
-| Ollama | Local daemon, default `http://localhost:11434` | Install Ollama and pull a model |
-| OpenAI-compatible | Sends tab metadata to configured `/v1/chat/completions` endpoint | Endpoint, API key, model, consent |
-| Gemini | Sends tab metadata to Google generateContent endpoint | API key, model, consent |
-| Custom | Sends tab metadata to configured OpenAI or Ollama-shaped endpoint | Endpoint, optional key, model, format, consent |
+| None | No request | Nothing |
+| Local | Firefox's built-in model, on your machine | Nothing |
+| Ollama | A local daemon, `http://localhost:11434` by default | Ollama installed and a model pulled |
+| OpenAI-compatible | Your configured `/v1/chat/completions` endpoint | Endpoint, API key, model, consent |
+| Gemini | Google's generateContent endpoint | API key, model, consent |
+| Custom | Any OpenAI- or Ollama-shaped endpoint | Endpoint, model, format, consent |
 
-Remote provider consent is separate from provider selection. Zen Tab Sorting should not send tab titles, URLs, or snippets to remote endpoints unless consent and required config are present.
+The three remote engines send tab titles, URLs and optional page snippets to whichever service you point them at. That only happens after you tick the consent checkbox, which is separate from picking the engine and off by default. Until it's ticked, the remote code paths refuse to make a request. With Local and Ollama nothing leaves your machine, so neither asks for consent.
+
+There's a Test connection button under Remote Provider Settings. It runs one small request through the same checks a real sort uses and reports back what happened, so a wrong key or model shows you the actual error instead of a sort that quietly does nothing.
+
+Gemini model names are forgiving: `gemini-2.5-flash`, `models/gemini-2.5-flash` and `Gemini 2.5 Flash` all work, and stray whitespace around keys and endpoints is trimmed.
 
 ## Settings
 
-- **Group Rules**: editable group name, color, and domain list.
-- **Skip Domains**: hosts that should stay visible and ungrouped.
-- **Backup & Restore**: export/import rules and skip domains as JSON.
-- **Look & Feel**: minimal style and strict rule enforcement.
-- **AI Sorting**: local, Ollama, and remote provider controls.
-- **Sorting mode**: rules-first, hybrid, or full AI.
-- **Remote Provider Settings**: OpenAI-compatible, Gemini, and custom endpoint fields.
+Group Rules holds the group name, color and domain list for each rule, and you can drag rows to reorder them. Skip Domains lists the hosts the wand should leave alone. Backup & Restore exports or imports both lists as JSON.
+
+Look & Feel covers minimal styling, strict rule enforcement, and the collapsed-group marker options described below. AI Sorting has the engine, the consent checkbox, the sorting mode, and what happens when the AI matches or creates a group. Remote Provider Settings holds the endpoint, key and model fields for whichever remote engine you picked.
+
+## What this fork changes
+
+The visual side is reskinned after [Advanced Tab Groups](https://github.com/Vertex-Mods/Advanced-Tab-Groups). Groups get a colored accent bar down the side of their tabs and a tidier label row, all keyed to Zen's own theme variables so it follows your theme rather than fighting it.
+
+Collapsed groups get a different treatment. Firefox paints a collapsed group's label as a filled colored chip, which reads as a heavy box in Zen's vertical sidebar, so this mod strips it back to a plain label with a small colored marker beside the name. You can set the marker to a circle or a rounded square, give each shape its own size, and choose whether it shrinks, stays the same, or disappears when you open the group.
+
+Two fixes carried over from Zen Tab Wand patch things Zen still gets wrong. Collapsing a group actually hides its tabs, which sounds obvious until you try it: Zen's vertical sidebar never shipped the CSS for it, so the chevron toggled a state that changed nothing ([#11134](https://github.com/zen-browser/desktop/issues/11134), [#11739](https://github.com/zen-browser/desktop/issues/11739)). Collapsed groups also stay collapsed across restarts, because Zen's session store drops that state and the mod saves the collapsed group names separately and reapplies them when groups are restored.
+
+Right-clicking a group header gives you a Dissolve group option, which removes the group and leaves its tabs in place at the top of the workspace.
+
+## Credits
+
+This is based on [Zen Tab Wand](https://github.com/flantig/Zen-Tab-Wand) by flantig, by way of [OpenTabSort Zen](https://github.com/nggurbanov/OpenTabSort-Zen) by nggurbanov, which added the remote provider support and the test harness. Both are MIT licensed and their copyright stands.
+
+Preferences are still stored under the `extensions.zen-auto-organize.*` prefix from the original, so rules and settings carry over if you're coming from either of those mods.
 
 ## Development
 
-Install dependencies:
-
 ```sh
 npm install
-```
-
-Run the full gate:
-
-```sh
 npm run check
 ```
 
-Run the isolated Zen Browser E2E gate:
+`npm run check` runs the manifest, preferences and security validators, then the test suite. There's also an end-to-end runner that drives a real Sine-loaded Zen in a throwaway profile:
 
 ```sh
 npm run e2e:zen -- --tabs 300
 ```
 
-The E2E runner creates a disposable Zen profile, copies the installed Sine engine from an existing Zen profile, installs the local checkout into that lab profile, and drives the real Sine-loaded organize handler through Marionette. It does not operate on your main Zen profile. Pass `--sine-profile <path>` if auto-detection cannot find a profile with Sine installed.
-
-By default the runner uses a deterministic local fake OpenAI-compatible provider. To test a real OpenRouter-compatible provider and write a redacted semantic quality report:
-
-```sh
-OPENROUTER_API_KEY=... npm run e2e:zen -- --provider real --scenario full-ai --tabs 120 --quality-artifact .omo/ulw-loop/evidence/real-full-ai-quality.json
-```
-
-In real-provider mode, Zen still talks only to a local forwarding proxy with a dummy key. The proxy reads `OPENROUTER_API_KEY`, defaults to `https://openrouter.ai/api/v1` and `google/gemini-3.5-flash`, and records only redacted call metadata plus label-agnostic grouping quality metrics.
-
-Useful focused checks:
-
-```sh
-npm test -- tests/provider-readiness.test.mjs tests/provider-requests.test.mjs tests/security.test.mjs
-node scripts/validate-manifest.mjs
-node scripts/validate-preferences.mjs
-node scripts/compare-neurosort-advantages.mjs
-```
-
-## Relationship To Zen Tab Wand
-
-Zen Tab Sorting preserves the MIT-licensed Zen Tab Wand product base and credits its original author. The `extensions.zen-auto-organize.*` preference prefix is intentionally retained for compatibility with existing rules and settings.
-
-## Relationship To NeuroSort
-
-NeuroSort proved out a stronger engineering harness and provider model, but its Zen chrome integration was thinner and more fragile. This fork uses Zen Tab Wand's product surface as the base and ports NeuroSort's useful engineering advantages into it.
+It builds its own profile, copies the Sine engine from an existing one, and never touches your main profile. By default it talks to a local fake provider rather than a real API.
 
 ## License
 
-MIT. Original Zen Tab Wand copyright remains in `LICENSE`.
+MIT. The original Zen Tab Wand copyright remains in `LICENSE`.

@@ -61,7 +61,10 @@ const runChecks = async (openRoot, oldRoot) => {
   return [
     {
       name: "provider choices",
-      ok: includesAll(readme, ["Off", "Local", "Ollama", "OpenAI-compatible", "Gemini", "Custom"]) &&
+      // "None" rather than "Off": the ai-engine dropdown has no explicit off
+      // option, so Sine renders its placeholder as "None" and that is what the
+      // README documents.
+      ok: includesAll(readme, ["None", "Local", "Ollama", "OpenAI-compatible", "Gemini", "Custom"]) &&
         includesAll(engineValues.join(","), ["local", "ollama", "openai", "gemini", "custom"]) &&
         prefsUi.includes("Leave AI engine off") &&
         providerSettings.includes('return { provider: "off", consentToSendData: false }') &&
@@ -129,14 +132,23 @@ const runChecks = async (openRoot, oldRoot) => {
         readText(openRoot, "tests/provider-batching.test.mjs").includes("300 ready-provider tabs"),
     },
     {
-      name: "README differences",
-      ok: includesAll(readme, ["What Makes This Fork Different", "Relationship To NeuroSort", "Relationship To Zen Tab Wand"]) &&
+      // The README no longer carries the upstream fork's section headings; it
+      // documents this mod for its own users. What still has to hold is the MIT
+      // attribution to both upstreams and the absence of the legacy endpoint.
+      name: "README attribution",
+      ok: includesAll(readme, ["Zen Tab Wand", "flantig", "OpenTabSort Zen", "nggurbanov", "based on", "MIT"]) &&
         (!oldRootAvailable || oldReadme.includes("# NeuroSort")) &&
         !readme.includes(["https://ai.redivo.ru", "/v1"].join("")),
     },
     {
       name: "retained Wand advantages",
-      ok: includesAll(readme, ["editable domain rules", "skip domains", "backup and restore", "Plan Mode", "local AI", "Ollama", "persistent collapsed groups"]) &&
+      // Matched case-insensitively against the README's own wording rather than
+      // the upstream fork's phrasing; the point is that each carried-over
+      // feature is still documented somewhere.
+      ok: includesAll(readme.toLowerCase(), [
+        "domain rules", "skip domains", "backup & restore",
+        "preview the whole plan", "ollama", "collapsed across restarts",
+      ]) &&
         includesAll(prefsUi, ["buildRulesEditor", "buildSkipDomainsEditor", "buildBackupRestoreSection"]) &&
         config.includes("collapsed-groups-json"),
     },
