@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const REPO = "nggurbanov/OpenTabSort-Zen";
+const REPO = "LoopRook/Zen-Tab-Sorting";
 const GITHUB_BASE = `https://github.com/${REPO}`;
 const RAW_BASE = `https://raw.githubusercontent.com/${REPO}/main`;
 
@@ -61,8 +61,8 @@ export const validateManifest = (rootDir = process.cwd()) => {
   const configSource = readFileSync(resolve(rootDir, "modules/config.mjs"), "utf8");
   const buildVersion = configSource.match(/BUILD_VERSION\s*=\s*"([^"]+)"/)?.[1] || "";
 
-  expectValue(errors, "id", theme.id, "opentabsort-zen");
-  expectValue(errors, "name", theme.name, "OpenTabSort Zen");
+  expectValue(errors, "id", theme.id, "zen-tab-sorting");
+  expectValue(errors, "name", theme.name, "Zen Tab Sorting");
   if (typeof theme.version !== "string" || !theme.version.trim()) {
     errors.push("version must be a non-empty string");
   }
@@ -86,5 +86,5 @@ if (isCli) {
     console.error(result.errors.join("\n"));
     process.exit(1);
   }
-  console.log("validate-manifest: PASS opentabsort-zen manifest/package/build version URLs/scripts");
+  console.log("validate-manifest: PASS zen-tab-sorting manifest/package/build version URLs/scripts");
 }

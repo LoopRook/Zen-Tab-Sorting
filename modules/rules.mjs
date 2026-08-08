@@ -1,4 +1,4 @@
-// OpenTabSort Zen — rules data layer.
+// Zen Tab Sorting — rules data layer.
 // Reads/writes the rules JSON pref, validates rules.json file contents, and exposes
 // the precedence chain (pref > file > built-in defaults).
 

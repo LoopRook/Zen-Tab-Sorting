@@ -1,4 +1,4 @@
-// OpenTabSort Zen — browser-context event hooks.
+// Zen Tab Sorting — browser-context event hooks.
 //
 // Rule growth is now strictly user-initiated:
 //   • Settings UI — direct editing of each rule's domain list.
@@ -70,7 +70,7 @@ const applyToRule = (tab, groupName, group) => {
 // Replaces the previous global TabGrouped listener (which couldn't reliably
 // distinguish user actions from Zen's async session-restore re-attaches) with
 // an explicit user-driven flow: no events, no race conditions.
-const PARENT_MENU_ID = "opentabsort-zen-add-to-rule-menu";
+const PARENT_MENU_ID = "zen-tab-sorting-add-to-rule-menu";
 
 const findContextMenu = () =>
   document.getElementById("tabContextMenu") ||
@@ -267,11 +267,11 @@ export const setupTabGroupContextMenu = () => {
   // Build menuitem + separator. Hidden by default; shown on popupshowing when
   // the most recent right-click was on a tab-group.
   const separator = document.createXULElement("menuseparator");
-  separator.id = "opentabsort-zen-dissolve-separator";
+  separator.id = "zen-tab-sorting-dissolve-separator";
   separator.setAttribute("hidden", "true");
 
   const item = document.createXULElement("menuitem");
-  item.id = "opentabsort-zen-dissolve-group";
+  item.id = "zen-tab-sorting-dissolve-group";
   item.setAttribute("label", "Dissolve group");
   item.setAttribute("hidden", "true");
 
@@ -318,8 +318,8 @@ export const teardownTabGroupContextMenu = () => {
     if (_onMenuShowing) menu.removeEventListener("popupshowing", _onMenuShowing);
     if (_onMenuHidden) menu.removeEventListener("popuphidden", _onMenuHidden);
     menu._zaoDissolveInstalled = false;
-    const item = menu.querySelector?.("#opentabsort-zen-dissolve-group");
-    const sep = menu.querySelector?.("#opentabsort-zen-dissolve-separator");
+    const item = menu.querySelector?.("#zen-tab-sorting-dissolve-group");
+    const sep = menu.querySelector?.("#zen-tab-sorting-dissolve-separator");
     if (item?.isConnected) try { item.remove(); } catch {}
     if (sep?.isConnected) try { sep.remove(); } catch {}
   }

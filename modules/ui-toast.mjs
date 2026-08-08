@@ -1,4 +1,4 @@
-// OpenTabSort Zen — shared toast / system-notification helper.
+// Zen Tab Sorting — shared toast / system-notification helper.
 //
 // Tries Zen's UI manager first (best integration), falls back to the standard
 // nsIAlertsService (OS-level notification), finally console.warn if neither
@@ -15,7 +15,7 @@ export const showToast = (message) => {
       // have. We log + fall through to the alerts service which takes raw text.
       try {
         const alertsService = Cc["@mozilla.org/alerts-service;1"]?.getService(Ci.nsIAlertsService);
-        alertsService?.showAlertNotification(null, "OpenTabSort Zen", message);
+        alertsService?.showAlertNotification(null, "Zen Tab Sorting", message);
       } catch {}
       return;
     }

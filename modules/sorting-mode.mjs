@@ -1,4 +1,4 @@
-// OpenTabSort Zen — sorting mode decisions.
+// Zen Tab Sorting — sorting mode decisions.
 //
 // Keeps the click orchestrator from hard-coding the meaning of every mode.
 

@@ -1,4 +1,4 @@
-// OpenTabSort Zen — tab-group manipulation: find/create/dissolve/consolidate,
+// Zen Tab Sorting — tab-group manipulation: find/create/dissolve/consolidate,
 // color application (named via Zen API; hex via CSS variable overrides), and the
 // sort-ungrouped-to-top pass.
 

@@ -1,6 +1,6 @@
-# OpenTabSort Zen — Documentation
+# Zen Tab Sorting — Documentation
 
-OpenTabSort Zen is a Zen Browser Sine mod that auto-organizes tabs into groups using two passes:
+Zen Tab Sorting is a Zen Browser Sine mod that auto-organizes tabs into groups using two passes:
 
 1. **Pass 1 — Deterministic domain rules**: a hostname-to-group map (e.g. `calendar.google.com → Calendar`) defined in the settings widget, matched first-match-wins.
 2. **Pass 2 — AI fallback** (shipped): unmatched tabs are sent to the selected engine:

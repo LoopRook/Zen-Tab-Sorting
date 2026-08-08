@@ -1,4 +1,4 @@
-// OpenTabSort Zen — tab enumeration + DOM helpers.
+// Zen Tab Sorting — tab enumeration + DOM helpers.
 
 export const getTabTitle = (tab) => {
   if (!tab?.isConnected) return "";

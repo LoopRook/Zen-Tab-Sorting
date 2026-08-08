@@ -1,4 +1,4 @@
-// OpenTabSort Zen — entry point.
+// Zen Tab Sorting — entry point.
 // Loaded by Sine in both `chrome://browser/content/browser.xhtml` (the main browser
 // window) and `about:preferences*` (the settings page). Branches on window.location
 // to wire the right submodules in each context.
@@ -51,10 +51,10 @@ const tryInitializeBrowser = () => {
       setupTabGroupCreateHook();
       setupCollapsedStatePersistence();
       setupMinimalStylePrefObserver();
-      window.OpenTabSortZen = Object.freeze({
+      window.ZenTabSorting = Object.freeze({
         buildVersion: BUILD_VERSION,
         handleOrganizeClick: async () => {
-          window.OpenTabSortZenLastRun = {
+          window.ZenTabSortingLastRun = {
             startedAt: Date.now(),
             finished: false,
             before: {
@@ -65,12 +65,12 @@ const tryInitializeBrowser = () => {
           };
           try {
             await handleOrganizeClick();
-            window.OpenTabSortZenLastRun.finished = true;
+            window.ZenTabSortingLastRun.finished = true;
           } catch (e) {
-            window.OpenTabSortZenLastRun.error = e?.stack || e?.message || String(e);
+            window.ZenTabSortingLastRun.error = e?.stack || e?.message || String(e);
             throw e;
           }
-          return window.OpenTabSortZenLastRun;
+          return window.ZenTabSortingLastRun;
         },
       });
 
