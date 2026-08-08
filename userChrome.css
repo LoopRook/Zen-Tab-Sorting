@@ -27,6 +27,128 @@ tab-group.zao-minimal {
   --tab-group-line-color: color-mix(in srgb, currentColor 18%, transparent) !important;
 }
 
+/* --- Sidebar group cards: Advanced-Tab-Groups-style skin.
+   Ported from Vertex-Mods/Advanced-Tab-Groups (userChrome.css v3.4.0s) onto the
+   same native Zen tab-group DOM this mod already uses. Purely visual: gives each
+   rule-matched group a rounded color "chip" icon, a left accent bar keyed to the
+   group's color, and a tidy 36px label row. Everything keys off Zen's own theme
+   tokens (--tab-group-color, --tab-selected-textcolor, --border-radius-medium),
+   so it stays theme-adaptive and — because the accent bar/chip read
+   --tab-group-color — automatically stays subdued under `.zao-minimal` mode while
+   popping in the default mode.
+
+   IMPORTANT: this block deliberately does NOT touch collapse behavior. Collapse
+   stays owned by the `tab-group[collapsed] tab[aria-hidden="true"]{display:none}`
+   rule above; ATG's own max-height/opacity collapse block is intentionally not
+   ported so the two mechanisms never compete. */
+tab-group:not([split-view-group]) {
+  --tab-group-stroke: light-dark(
+    color-mix(in srgb, var(--zen-primary-color, currentColor) 60%, black),
+    color-mix(in srgb, var(--zen-colors-primary, currentColor) 20%, var(--toolbox-textcolor, currentColor)));
+
+  .tab-group-label-container {
+    height: 36px !important;
+    margin: 0 !important;
+    padding: 0 10px 0 0 !important;
+    border-radius: var(--border-radius-medium, 6px) !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+
+    .tab-close-button {
+      display: none !important;
+    }
+
+    &:hover {
+      background-color: var(--tab-hover-background-color, color-mix(in srgb, currentColor 8%, transparent)) !important;
+
+      .tab-close-button {
+        -moz-window-dragging: no-drag !important;
+        visibility: visible !important;
+        display: flex !important;
+      }
+    }
+
+    .tab-group-icon-container {
+      margin: 0 6px 0 10px;
+    }
+
+    /* Rounded color chip filled with the group's assigned color. */
+    .tab-group-icon {
+      list-style-image: none !important;
+      display: flex !important;
+      justify-content: center !important;
+      align-items: center !important;
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      position: relative;
+      fill: var(--tab-group-stroke, currentColor) !important;
+      background: var(--tab-group-color);
+
+      &[zen-emoji-open="true"]::before {
+        border: 1px dashed light-dark(rgba(0, 0, 0, 0.5), rgba(255, 255, 255, 0.5));
+        border-radius: 6px;
+        content: "";
+        position: absolute;
+        inset: -2px;
+        pointer-events: none;
+      }
+
+      .group-icon {
+        display: block;
+        width: 12px;
+        height: 12px;
+        fill: white;
+      }
+
+      & label {
+        transform: translate(0, -1px);
+      }
+    }
+
+    .tab-group-label {
+      direction: ltr;
+      mask-image: linear-gradient(to left, transparent, black 1em);
+      margin-right: auto !important;
+      width: 100%;
+      height: 100% !important;
+      padding: 0 4px !important;
+      background: transparent !important;
+      color: var(--tab-selected-textcolor) !important;
+      font-weight: 400 !important;
+      text-align: start !important;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 5px;
+
+      &:-moz-window-inactive {
+        color: var(--toolbox-textcolor-inactive, currentColor) !important;
+      }
+    }
+  }
+
+  /* Left accent bar in the group's color, running the height of the members. */
+  .tab-group-container {
+    max-height: 100% !important;
+    position: relative;
+    margin-inline-start: 12px !important;
+
+    &::after {
+      content: "";
+      position: absolute;
+      left: -2px !important;
+      top: 0;
+      height: 100%;
+      width: 2px;
+      pointer-events: none !important;
+      background: var(--tab-group-color);
+    }
+  }
+}
+
 /* --- Toolbar button: wiggle the wand on click --- */
 @keyframes zao-wand-wiggle {
   0%   { transform: rotate(0deg); }
