@@ -20,9 +20,9 @@
 // `_zaoXxxHook` expando. This prevents double-install if the entry script is
 // re-evaluated (e.g. across module reloads during development).
 
-import { CONFIG, LOG, BUILD_VERSION, isZenColorName, isUnsetLabel, pipRadiusFor } from "./config.mjs";
+import { CONFIG, LOG, BUILD_VERSION, isZenColorName, isUnsetLabel, pipRadiusFor, pipOpenSizeFor } from "./config.mjs";
 import { getTabUrl, getHostname } from "./tabs.mjs";
-import { readRulesPref, writeRulesPref, readSkipDomainsPref, writeSkipDomainsPref, readCollapsedGroupsPref, writeCollapsedGroupsPref, isMinimalStyle, getPipShape, getPipSize } from "./rules.mjs";
+import { readRulesPref, writeRulesPref, readSkipDomainsPref, writeSkipDomainsPref, readCollapsedGroupsPref, writeCollapsedGroupsPref, isMinimalStyle, getPipShape, getPipSize, getPipOpenBehavior } from "./rules.mjs";
 import { applyGroupColor, syncAllGroupColors, moveTabsToTop } from "./groups.mjs";
 
 // ─── Helpers (module level so they're reusable + easy to find) ───────────────
@@ -500,10 +500,16 @@ export const applyPipStyle = () => {
   try {
     const shape = getPipShape();
     const size = getPipSize(shape);
-    const radius = pipRadiusFor(shape, size);
+    const openSize = pipOpenSizeFor(getPipOpenBehavior(), size);
     const root = document.documentElement;
     root.style.setProperty("--zao-pip-size", `${size}px`);
-    root.style.setProperty("--zao-pip-radius", radius);
+    root.style.setProperty("--zao-pip-radius", pipRadiusFor(shape, size));
+    // Open state: size 0 means "draw nothing", so the marker collapses away and
+    // the label keeps its normal indent.
+    root.style.setProperty("--zao-pip-open-size", `${openSize}px`);
+    root.style.setProperty("--zao-pip-open-radius", pipRadiusFor(shape, openSize));
+    root.style.setProperty("--zao-pip-open-display", openSize > 0 ? "block" : "none");
+    root.style.setProperty("--zao-pip-open-pad", openSize > 0 ? `${openSize + 10}px` : "4px");
   } catch (e) {
     console.error(`${LOG} applyPipStyle error:`, e);
   }

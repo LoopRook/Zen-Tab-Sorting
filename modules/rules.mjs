@@ -179,6 +179,16 @@ export const getPipShape = () => {
   }
 };
 
+// What the marker does while the group is open.
+export const getPipOpenBehavior = () => {
+  try {
+    const value = Services.prefs.getStringPref(CONFIG.PIP_OPEN_BEHAVIOR_PREF, "smaller");
+    return value === "same" || value === "hidden" ? value : "smaller";
+  } catch {
+    return "smaller";
+  }
+};
+
 // Pip size in px for a given shape, each shape having its own stored value.
 // Stored as string prefs (Sine has no number control), so parse defensively and
 // clamp — a blank or nonsense value falls back to the default rather than

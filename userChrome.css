@@ -208,6 +208,33 @@ tab-group:not([split-view-group]) {
   }
 }
 
+/* Open groups get the same marker at a reduced size, so a group reads as "open"
+   at a glance without losing its color. Governed by the "When a group is open"
+   setting — browser-hooks.mjs resolves it to these properties, and sets the size
+   to 0 / display none for the "No marker" choice (how the open state looked
+   before this was configurable). Zen's tab-group renders no icon of its own —
+   just a label container and label — so there is nothing here to collide with. */
+:root[zen-sidebar-expanded] :is(tab-group, zen-folder):not([collapsed]):not([split-view-group]) {
+  .tab-group-label {
+    position: relative;
+    padding-inline-start: var(--zao-pip-open-pad, 4px) !important;
+
+    &::before {
+      content: "";
+      display: var(--zao-pip-open-display, none);
+      position: absolute;
+      inset-inline-start: 4px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: var(--zao-pip-open-size, 0);
+      height: var(--zao-pip-open-size, 0);
+      border-radius: var(--zao-pip-open-radius, 50%);
+      background: var(--tab-group-background-color, var(--tab-group-color));
+      pointer-events: none;
+    }
+  }
+}
+
 /* --- Toolbar button: wiggle the wand on click --- */
 @keyframes zao-wand-wiggle {
   0%   { transform: rotate(0deg); }

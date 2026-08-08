@@ -41,6 +41,17 @@
     ]
   },
   {
+    "type": "dropdown",
+    "label": "When a group is open — how the marker behaves once the group is expanded",
+    "property": "extensions.zen-auto-organize.pip-open-behavior",
+    "defaultValue": "smaller",
+    "options": [
+      { "label": "Smaller marker", "value": "smaller" },
+      { "label": "Same size", "value": "same" },
+      { "label": "No marker", "value": "hidden" }
+    ]
+  },
+  {
     "type": "string",
     "label": "Circle marker size in pixels (4–24)",
     "property": "extensions.zen-auto-organize.pip-size-circle",

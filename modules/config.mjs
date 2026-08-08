@@ -15,7 +15,7 @@ export const LOG = "[ZenTabSort]";
 // Build tag — mirrors theme.json's `version` for shipped releases, and gets a
 // `+tag.N` suffix for in-progress iterative builds so the Browser Console
 // reveals which build is actually running (vs. a stale module cache).
-export const BUILD_VERSION = "1.6.0";
+export const BUILD_VERSION = "1.7.0";
 
 export const CONFIG = {
   // Init polling — wait for gBrowser/gZenWorkspaces/separator to appear at startup.
@@ -63,10 +63,17 @@ export const CONFIG = {
   // Pre-split single-size pref. Still read as a fallback so anyone who set a
   // size before the split keeps it for both shapes; never written anymore.
   PIP_SIZE_LEGACY_PREF: "extensions.zen-auto-organize.pip-size",
+  // What the marker does while the group is open: "smaller" (default), "same",
+  // or "hidden" (no marker when open — how the pip behaved before this option).
+  PIP_OPEN_BEHAVIOR_PREF: "extensions.zen-auto-organize.pip-open-behavior",
   PIP_PREF_BRANCH: "extensions.zen-auto-organize.pip-",
   PIP_SIZE_DEFAULT: 8,   // px — the original hard-coded size
   PIP_SIZE_MIN: 4,
   PIP_SIZE_MAX: 24,
+  // How much the marker shrinks while the group is open, and the floor that
+  // keeps it visible when the closed size is already small.
+  PIP_OPEN_SCALE: 0.6,
+  PIP_OPEN_MIN: 3,
   // Rounded-square radius as a fraction of the pip's size. 1/4 matches the
   // 16px/4px proportion Zen and the group icon chips use, so a square pip
   // reads as the same family of rounded squares as the rest of the UI.
@@ -181,6 +188,15 @@ export const pipRadiusFor = (shape, size) =>
 // Which size pref backs a given shape.
 export const pipSizePrefFor = (shape) =>
   shape === "square" ? CONFIG.PIP_SIZE_SQUARE_PREF : CONFIG.PIP_SIZE_CIRCLE_PREF;
+
+// Marker size to draw while the group is open. 0 means "draw nothing", which
+// is how the open state behaved before this became configurable. The floor
+// keeps a shrunk marker visible even when the closed size is at its minimum.
+export const pipOpenSizeFor = (behavior, closedSize) => {
+  if (behavior === "hidden") return 0;
+  if (behavior === "same") return closedSize;
+  return Math.max(CONFIG.PIP_OPEN_MIN, Math.round(closedSize * CONFIG.PIP_OPEN_SCALE));
+};
 
 export const ZEN_COLOR_NAMES = new Set(PRESET_COLORS.map((c) => c.name));
 export const HEX_BY_NAME = new Map(PRESET_COLORS.map((c) => [c.name, c.hex]));
