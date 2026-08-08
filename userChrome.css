@@ -176,9 +176,10 @@ tab-group:not([split-view-group]) {
     box-shadow: none !important;
     outline: none !important;
     border-radius: var(--border-radius-medium, 6px) !important;
-    /* Room for the pip: left inset + the pip itself + a gap, so the text keeps
-       clear of the dot at any configured size. */
-    padding-inline-start: calc(var(--zao-pip-size, 8px) + 10px) !important;
+    /* Room for the marker: left inset + the marker itself + a gap, so the text
+       keeps clear of it at any configured size. Falls back to the marker-less
+       indent when the shape is set to None. */
+    padding-inline-start: var(--zao-pip-pad, 18px) !important;
 
     &:hover {
       background-color: transparent !important;
@@ -186,13 +187,14 @@ tab-group:not([split-view-group]) {
 
     &::before {
       content: "";
+      /* Size and shape come from the Look & Feel prefs — browser-hooks.mjs
+         publishes them onto the document root (applyPipStyle). The fallbacks
+         here are the original circle, used before that first runs. */
+      display: var(--zao-pip-display, block);
       position: absolute;
       inset-inline-start: 4px;
       top: 50%;
       transform: translateY(-50%);
-      /* Size and shape come from the Look & Feel prefs — browser-hooks.mjs
-         publishes them onto the document root (applyPipStyle). The fallbacks
-         here are the original circle, used before that first runs. */
       width: var(--zao-pip-size, 8px);
       height: var(--zao-pip-size, 8px);
       border-radius: var(--zao-pip-radius, 50%);

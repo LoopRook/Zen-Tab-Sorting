@@ -167,13 +167,13 @@ export const isMinimalStyle = () => {
   }
 };
 
-// Collapsed-group pip appearance. "circle" (default) or "square" — a rounded
-// square proportioned like the rest of Zen's rounded-square iconography.
+// Collapsed-group marker shape: "circle" (default), "square" (a rounded square
+// proportioned like the rest of Zen's rounded-square iconography), or "none"
+// to switch the marker off entirely.
 export const getPipShape = () => {
   try {
-    return Services.prefs.getStringPref(CONFIG.PIP_SHAPE_PREF, "circle") === "square"
-      ? "square"
-      : "circle";
+    const value = Services.prefs.getStringPref(CONFIG.PIP_SHAPE_PREF, "circle");
+    return value === "square" || value === "none" ? value : "circle";
   } catch {
     return "circle";
   }

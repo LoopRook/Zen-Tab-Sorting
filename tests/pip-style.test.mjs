@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { CONFIG, normalizePipSize, pipRadiusFor, pipSizePrefFor, pipOpenSizeFor } from "../modules/config.mjs";
+import { CONFIG, normalizePipSize, pipRadiusFor, pipSizePrefFor, pipOpenSizeFor, pipMetrics } from "../modules/config.mjs";
 
 test("Given no stored pip size When normalized Then the original default size is used", () => {
   assert.equal(normalizePipSize(""), CONFIG.PIP_SIZE_DEFAULT);
@@ -59,4 +59,39 @@ test("Given the hidden open behavior When sizing the marker Then it is zero so n
 
 test("Given an unknown open behavior When sizing the marker Then it defaults to shrinking", () => {
   assert.equal(pipOpenSizeFor("", 8), pipOpenSizeFor("smaller", 8));
+});
+
+test("Given the None shape When resolving metrics Then the marker is hidden in both states", () => {
+  const m = pipMetrics("none", 8, "smaller");
+  assert.equal(m.display, "none");
+  assert.equal(m.openDisplay, "none");
+  assert.equal(m.size, 0);
+  assert.equal(m.openSize, 0);
+  // Label keeps the plain indent it would have without a marker.
+  assert.equal(m.pad, CONFIG.PIP_LABEL_PAD_BARE);
+  assert.equal(m.openPad, CONFIG.PIP_LABEL_PAD_BARE);
+});
+
+test("Given a circle marker When resolving metrics Then both states are drawn and padded for the size", () => {
+  const m = pipMetrics("circle", 8, "smaller");
+  assert.equal(m.display, "block");
+  assert.equal(m.size, 8);
+  assert.equal(m.radius, "50%");
+  assert.equal(m.pad, `${8 + CONFIG.PIP_LABEL_GAP}px`);
+  assert.equal(m.openSize, 5);
+  assert.equal(m.openDisplay, "block");
+});
+
+test("Given a square marker When resolving metrics Then each state gets a radius scaled to its own size", () => {
+  const m = pipMetrics("square", 16, "smaller");
+  assert.equal(m.radius, "4px");
+  assert.equal(m.openSize, 10);
+  assert.equal(m.openRadius, "2.5px");
+});
+
+test("Given the hidden open behavior When resolving metrics Then only the open state is undrawn", () => {
+  const m = pipMetrics("circle", 8, "hidden");
+  assert.equal(m.display, "block");
+  assert.equal(m.openDisplay, "none");
+  assert.equal(m.openPad, CONFIG.PIP_LABEL_PAD_BARE);
 });

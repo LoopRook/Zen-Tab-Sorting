@@ -225,11 +225,13 @@ const updateConditionalFields = (dialog) => {
   setHidden(findPrefRow(dialog, CONFIG.AI_CUSTOM_FORMAT_PREF),        engine !== "custom");
   setHidden(dialog.querySelector(".zao-provider-test"),               !isRemoteProvider);
 
-  // Each pip shape keeps its own size, so only surface the field for the shape
-  // currently selected — the other one stays stored, just out of the way.
+  // Each marker shape keeps its own size, so only surface the field for the
+  // shape currently selected — the other one stays stored, just out of the way.
+  // With the marker off, neither size nor open behavior means anything.
   const pipShape = getPipShape();
   setHidden(findPrefRow(dialog, CONFIG.PIP_SIZE_CIRCLE_PREF), pipShape !== "circle");
   setHidden(findPrefRow(dialog, CONFIG.PIP_SIZE_SQUARE_PREF), pipShape !== "square");
+  setHidden(findPrefRow(dialog, CONFIG.PIP_OPEN_BEHAVIOR_PREF), pipShape === "none");
 };
 
 // First-time AI engine warning modals.

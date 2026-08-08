@@ -15,7 +15,7 @@ export const LOG = "[ZenTabSort]";
 // Build tag — mirrors theme.json's `version` for shipped releases, and gets a
 // `+tag.N` suffix for in-progress iterative builds so the Browser Console
 // reveals which build is actually running (vs. a stale module cache).
-export const BUILD_VERSION = "1.7.0";
+export const BUILD_VERSION = "1.8.0";
 
 export const CONFIG = {
   // Init polling — wait for gBrowser/gZenWorkspaces/separator to appear at startup.
@@ -74,6 +74,10 @@ export const CONFIG = {
   // keeps it visible when the closed size is already small.
   PIP_OPEN_SCALE: 0.6,
   PIP_OPEN_MIN: 3,
+  // Gap between the marker and the label text, and the label's start padding
+  // when no marker is drawn.
+  PIP_LABEL_GAP: 10,
+  PIP_LABEL_PAD_BARE: "4px",
   // Rounded-square radius as a fraction of the pip's size. 1/4 matches the
   // 16px/4px proportion Zen and the group icon chips use, so a square pip
   // reads as the same family of rounded squares as the rest of the UI.
@@ -196,6 +200,31 @@ export const pipOpenSizeFor = (behavior, closedSize) => {
   if (behavior === "hidden") return 0;
   if (behavior === "same") return closedSize;
   return Math.max(CONFIG.PIP_OPEN_MIN, Math.round(closedSize * CONFIG.PIP_OPEN_SCALE));
+};
+
+// Resolve the marker's geometry for both group states in one place, so the
+// browser-side applier stays a thin translation into CSS custom properties.
+// Shape "none" switches the marker off everywhere; the label then falls back to
+// the same start padding it would have without a marker.
+export const pipMetrics = (shape, closedSize, openBehavior) => {
+  const pad = (size) => (size > 0 ? `${size + CONFIG.PIP_LABEL_GAP}px` : CONFIG.PIP_LABEL_PAD_BARE);
+  if (shape === "none") {
+    return {
+      size: 0, radius: "50%", pad: CONFIG.PIP_LABEL_PAD_BARE, display: "none",
+      openSize: 0, openRadius: "50%", openPad: CONFIG.PIP_LABEL_PAD_BARE, openDisplay: "none",
+    };
+  }
+  const openSize = pipOpenSizeFor(openBehavior, closedSize);
+  return {
+    size: closedSize,
+    radius: pipRadiusFor(shape, closedSize),
+    pad: pad(closedSize),
+    display: "block",
+    openSize,
+    openRadius: pipRadiusFor(shape, openSize),
+    openPad: pad(openSize),
+    openDisplay: openSize > 0 ? "block" : "none",
+  };
 };
 
 export const ZEN_COLOR_NAMES = new Set(PRESET_COLORS.map((c) => c.name));

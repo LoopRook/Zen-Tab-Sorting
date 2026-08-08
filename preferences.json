@@ -35,9 +35,11 @@
     "label": "Collapsed group marker — the colored dot shown left of a collapsed group's name",
     "property": "extensions.zen-auto-organize.pip-shape",
     "defaultValue": "circle",
+    "placeholder": false,
     "options": [
       { "label": "Circle", "value": "circle" },
-      { "label": "Rounded square", "value": "square" }
+      { "label": "Rounded square", "value": "square" },
+      { "label": "None", "value": "none" }
     ]
   },
   {
@@ -45,6 +47,7 @@
     "label": "When a group is open — how the marker behaves once the group is expanded",
     "property": "extensions.zen-auto-organize.pip-open-behavior",
     "defaultValue": "smaller",
+    "placeholder": false,
     "options": [
       { "label": "Smaller marker", "value": "smaller" },
       { "label": "Same size", "value": "same" },
@@ -93,6 +96,7 @@
     "label": "Sorting mode",
     "property": "extensions.zen-auto-organize.ai-sort-mode",
     "defaultValue": "rules-first",
+    "placeholder": false,
     "options": [
       { "label": "Rules first — Use domain rules, then AI for leftovers", "value": "rules-first" },
       { "label": "Hybrid — Fast rules first, then AI-sort unmatched tabs every run", "value": "hybrid" },
@@ -104,6 +108,7 @@
     "label": "When AI assigns a tab to an existing group",
     "property": "extensions.zen-auto-organize.ai-existing-behavior",
     "defaultValue": "always-add",
+    "placeholder": false,
     "options": [
       { "label": "Always-add — Append the tab's domain to the matched rule (rules grow)", "value": "always-add" },
       { "label": "Transient — Move the tab only, rules untouched", "value": "transient" }
@@ -114,6 +119,7 @@
     "label": "When AI creates a new group",
     "property": "extensions.zen-auto-organize.ai-new-group-behavior",
     "defaultValue": "auto-add",
+    "placeholder": false,
     "options": [
       { "label": "Auto-add — Create the group and save it as a new rule", "value": "auto-add" },
       { "label": "Transient — Create the group only, no rule added", "value": "transient" },
@@ -211,6 +217,7 @@
     "label": "Custom request format",
     "property": "extensions.zen-auto-organize.ai-custom-format",
     "defaultValue": "openai",
+    "placeholder": false,
     "options": [
       { "label": "OpenAI-compatible chat", "value": "openai" },
       { "label": "Ollama generate", "value": "ollama" }

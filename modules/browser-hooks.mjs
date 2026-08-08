@@ -20,7 +20,7 @@
 // `_zaoXxxHook` expando. This prevents double-install if the entry script is
 // re-evaluated (e.g. across module reloads during development).
 
-import { CONFIG, LOG, BUILD_VERSION, isZenColorName, isUnsetLabel, pipRadiusFor, pipOpenSizeFor } from "./config.mjs";
+import { CONFIG, LOG, BUILD_VERSION, isZenColorName, isUnsetLabel, pipMetrics } from "./config.mjs";
 import { getTabUrl, getHostname } from "./tabs.mjs";
 import { readRulesPref, writeRulesPref, readSkipDomainsPref, writeSkipDomainsPref, readCollapsedGroupsPref, writeCollapsedGroupsPref, isMinimalStyle, getPipShape, getPipSize, getPipOpenBehavior } from "./rules.mjs";
 import { applyGroupColor, syncAllGroupColors, moveTabsToTop } from "./groups.mjs";
@@ -499,17 +499,16 @@ export const teardownMinimalStylePrefObserver = () => {
 export const applyPipStyle = () => {
   try {
     const shape = getPipShape();
-    const size = getPipSize(shape);
-    const openSize = pipOpenSizeFor(getPipOpenBehavior(), size);
+    const m = pipMetrics(shape, getPipSize(shape), getPipOpenBehavior());
     const root = document.documentElement;
-    root.style.setProperty("--zao-pip-size", `${size}px`);
-    root.style.setProperty("--zao-pip-radius", pipRadiusFor(shape, size));
-    // Open state: size 0 means "draw nothing", so the marker collapses away and
-    // the label keeps its normal indent.
-    root.style.setProperty("--zao-pip-open-size", `${openSize}px`);
-    root.style.setProperty("--zao-pip-open-radius", pipRadiusFor(shape, openSize));
-    root.style.setProperty("--zao-pip-open-display", openSize > 0 ? "block" : "none");
-    root.style.setProperty("--zao-pip-open-pad", openSize > 0 ? `${openSize + 10}px` : "4px");
+    root.style.setProperty("--zao-pip-size", `${m.size}px`);
+    root.style.setProperty("--zao-pip-radius", m.radius);
+    root.style.setProperty("--zao-pip-display", m.display);
+    root.style.setProperty("--zao-pip-pad", m.pad);
+    root.style.setProperty("--zao-pip-open-size", `${m.openSize}px`);
+    root.style.setProperty("--zao-pip-open-radius", m.openRadius);
+    root.style.setProperty("--zao-pip-open-display", m.openDisplay);
+    root.style.setProperty("--zao-pip-open-pad", m.openPad);
   } catch (e) {
     console.error(`${LOG} applyPipStyle error:`, e);
   }
