@@ -6,13 +6,15 @@ A tab organizer for [Zen Browser](https://zen-browser.app), installed through th
 
 ## Installing
 
-In Zen, open Sine and add this repository:
+Installing from the Sine mod store takes nothing beyond the install itself. Store mods run as they are.
+
+To install straight from this repository instead, add it in Sine:
 
 ```text
 LoopRook/Zen-Tab-Sorting
 ```
 
-There's one setting to change first. Sine only runs a mod's JavaScript if the mod came from its official store, unless you enable "Enable installing JS from unofficial sources" in Sine's settings. Without it this mod's stylesheet loads but none of its behavior does, so you get no wand button and no settings editors. Turn it on, restart Zen, then install.
+That route needs one setting turned on first, because Sine only runs a mod's JavaScript if the mod came from its official store. Enable "Enable installing JS from unofficial sources" in Sine's settings, then restart Zen before installing. Without it the stylesheet still loads but none of the behavior does, so you get no wand button and no settings editors.
 
 Don't run this alongside Zen Tab Wand or OpenTabSort Zen. All three share the same toolbar button, command, and preference keys, so two of them installed at once will fight over the same DOM.
 

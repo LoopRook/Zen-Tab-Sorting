@@ -38,6 +38,14 @@ const expectLocalFile = (rootDir, errors, label, value) => {
   }
 };
 
+// Map a raw.githubusercontent URL under this repo back to the file it should
+// serve, then assert that file exists locally.
+const expectRawUrlHasLocalFile = (rootDir, errors, label, url) => {
+  const prefix = `${RAW_BASE}/`;
+  if (typeof url !== "string" || !url.startsWith(prefix)) return;
+  expectLocalFile(rootDir, errors, label, decodeURIComponent(url.slice(prefix.length)));
+};
+
 const validateScripts = (rootDir, theme, errors) => {
   if (!isRecord(theme.scripts)) {
     errors.push("scripts must be an object");
@@ -70,9 +78,15 @@ export const validateManifest = (rootDir = process.cwd()) => {
   expectValue(errors, "BUILD_VERSION", buildVersion, theme.version);
   expectValue(errors, "homepage", theme.homepage, GITHUB_BASE);
   expectValue(errors, "readme", theme.readme, `${RAW_BASE}/README.md`);
-  expectValue(errors, "image", theme.image, `${RAW_BASE}/image.png`);
+  expectValue(errors, "image", theme.image, `${RAW_BASE}/assets/image.png`);
   expectValue(errors, "preferences", theme.preferences, "preferences.json");
   expectLocalFile(rootDir, errors, "preferences", theme.preferences);
+  // The readme and image URLs are what the marketplace fetches to build the
+  // store card. Checking the string alone would still pass if the file were
+  // renamed or never committed, so resolve each URL back to a repo path and
+  // confirm the file is actually there.
+  expectRawUrlHasLocalFile(rootDir, errors, "readme", theme.readme);
+  expectRawUrlHasLocalFile(rootDir, errors, "image", theme.image);
   validateScripts(rootDir, theme, errors);
 
   return { ok: errors.length === 0, errors };

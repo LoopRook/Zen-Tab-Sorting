@@ -17,7 +17,7 @@
     }
   },
   "readme": "https://raw.githubusercontent.com/LoopRook/Zen-Tab-Sorting/main/README.md",
-  "image": "https://raw.githubusercontent.com/LoopRook/Zen-Tab-Sorting/main/image.png",
+  "image": "https://raw.githubusercontent.com/LoopRook/Zen-Tab-Sorting/main/assets/image.png",
   "author": "LoopRook, based on OpenTabSort Zen by nggurbanov and Zen Tab Wand by flantig",
   "ai": "yes",
   "version": "1.8.0",
@@ -30,6 +30,6 @@
     "Ollama"
   ],
   "createdAt": "2026-05-15",
-  "updatedAt": "2026-08-07",
+  "updatedAt": "2026-08-08",
   "fork": ["zen"]
 }
