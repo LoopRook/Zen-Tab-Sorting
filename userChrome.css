@@ -46,7 +46,10 @@ tab-group:not([split-view-group]) {
     color-mix(in srgb, var(--zen-primary-color, currentColor) 60%, black),
     color-mix(in srgb, var(--zen-colors-primary, currentColor) 20%, var(--toolbox-textcolor, currentColor)));
 
-  .tab-group-label-container {
+  /* Scoped to the expanded state: current Zen (Aug 2026 "folders" update) has
+     its own collapsed-group rendering, and forcing our 36px row geometry onto
+     it produced cramped, outlined boxes. Collapsed groups render natively. */
+  &:not([collapsed]) .tab-group-label-container {
     height: 36px !important;
     margin: 0 !important;
     padding: 0 10px 0 0 !important;
