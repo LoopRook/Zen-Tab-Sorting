@@ -2,6 +2,8 @@
 
 A tab organizer for [Zen Browser](https://zen-browser.app), installed through the [Sine](https://github.com/CosmoCreeper/Sine) mod loader. You define domain rules, click the wand button in the workspace separator, and your open tabs drop into groups. An AI pass is available for whatever the rules don't cover, and it stays off until you turn it on.
 
+![Zen Tab Sorting sorting tabs into groups in the Zen sidebar](assets/in-action.gif)
+
 ## Installing
 
 In Zen, open Sine and add this repository:
@@ -45,6 +47,8 @@ Gemini model names are forgiving: `gemini-2.5-flash`, `models/gemini-2.5-flash` 
 
 ## Settings
 
+![The Zen Tab Sorting settings panel, showing the group rules table, skip domains, and the AI and marker options](assets/options.png)
+
 Group Rules holds the group name, color and domain list for each rule, and you can drag rows to reorder them. Skip Domains lists the hosts the wand should leave alone. Backup & Restore exports or imports both lists as JSON.
 
 Look & Feel covers minimal styling, strict rule enforcement, and the collapsed-group marker options described below. AI Sorting has the engine, the consent checkbox, the sorting mode, and what happens when the AI matches or creates a group. Remote Provider Settings holds the endpoint, key and model fields for whichever remote engine you picked.
@@ -53,7 +57,13 @@ Look & Feel covers minimal styling, strict rule enforcement, and the collapsed-g
 
 The visual side is reskinned after [Advanced Tab Groups](https://github.com/Vertex-Mods/Advanced-Tab-Groups). Groups get a colored accent bar down the side of their tabs and a tidier label row, all keyed to Zen's own theme variables so it follows your theme rather than fighting it.
 
+![An expanded group showing its accent bar above a collapsed group showing its marker](assets/Overview.png)
+
 Collapsed groups get a different treatment. Firefox paints a collapsed group's label as a filled colored chip, which reads as a heavy box in Zen's vertical sidebar, so this mod strips it back to a plain label with a small colored marker beside the name. You can set the marker to a circle or a rounded square, or turn it off entirely. Each shape keeps its own size, and you choose whether the marker shrinks, stays the same, or disappears when you open the group.
+
+| Circle | Rounded square |
+| --- | --- |
+| ![Groups marked with circles](assets/Circle.png) | ![The same groups marked with rounded squares](assets/Square.png) |
 
 Two fixes carried over from Zen Tab Wand patch things Zen still gets wrong. Collapsing a group actually hides its tabs, which sounds obvious until you try it: Zen's vertical sidebar never shipped the CSS for it, so the chevron toggled a state that changed nothing ([#11134](https://github.com/zen-browser/desktop/issues/11134), [#11739](https://github.com/zen-browser/desktop/issues/11739)). Collapsed groups also stay collapsed across restarts, because Zen's session store drops that state and the mod saves the collapsed group names separately and reapplies them when groups are restored.
 
