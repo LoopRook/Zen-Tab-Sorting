@@ -15,7 +15,7 @@ export const LOG = "[ZenTabSort]";
 // Build tag — mirrors theme.json's `version` for shipped releases, and gets a
 // `+tag.N` suffix for in-progress iterative builds so the Browser Console
 // reveals which build is actually running (vs. a stale module cache).
-export const BUILD_VERSION = "1.5.0";
+export const BUILD_VERSION = "1.6.0";
 
 export const CONFIG = {
   // Init polling — wait for gBrowser/gZenWorkspaces/separator to appear at startup.
@@ -51,11 +51,18 @@ export const CONFIG = {
   MINIMAL_STYLE_PREF: "extensions.zen-auto-organize.minimal-style",
   STRICT_RULES_PREF: "extensions.zen-auto-organize.strict-rules",
 
-  // Collapsed-group pip (the colored dot drawn left of a collapsed group's
-  // name — see userChrome.css). Both prefs share the `pip-` infix so a single
-  // prefix observer catches either one changing.
+  // Collapsed-group pip (the colored marker drawn left of a collapsed group's
+  // name — see userChrome.css). Every pip pref shares the `pip-` infix so one
+  // prefix observer catches any of them changing.
   PIP_SHAPE_PREF: "extensions.zen-auto-organize.pip-shape",
-  PIP_SIZE_PREF: "extensions.zen-auto-organize.pip-size",
+  // Size is stored per shape: a circle and a rounded square rarely read as the
+  // same weight at the same pixel size, so switching shapes keeps whatever the
+  // user tuned for each one instead of carrying a size across.
+  PIP_SIZE_CIRCLE_PREF: "extensions.zen-auto-organize.pip-size-circle",
+  PIP_SIZE_SQUARE_PREF: "extensions.zen-auto-organize.pip-size-square",
+  // Pre-split single-size pref. Still read as a fallback so anyone who set a
+  // size before the split keeps it for both shapes; never written anymore.
+  PIP_SIZE_LEGACY_PREF: "extensions.zen-auto-organize.pip-size",
   PIP_PREF_BRANCH: "extensions.zen-auto-organize.pip-",
   PIP_SIZE_DEFAULT: 8,   // px — the original hard-coded size
   PIP_SIZE_MIN: 4,
@@ -170,6 +177,10 @@ export const normalizePipSize = (raw) => {
 // it keeps the same rounded-square proportion as Zen's other small chips.
 export const pipRadiusFor = (shape, size) =>
   shape === "square" ? `${size / CONFIG.PIP_SQUARE_RADIUS_DIVISOR}px` : "50%";
+
+// Which size pref backs a given shape.
+export const pipSizePrefFor = (shape) =>
+  shape === "square" ? CONFIG.PIP_SIZE_SQUARE_PREF : CONFIG.PIP_SIZE_CIRCLE_PREF;
 
 export const ZEN_COLOR_NAMES = new Set(PRESET_COLORS.map((c) => c.name));
 export const HEX_BY_NAME = new Map(PRESET_COLORS.map((c) => [c.name, c.hex]));

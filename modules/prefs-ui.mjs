@@ -4,7 +4,7 @@
 // pipeline doesn't reach about:preferences scope).
 
 import { CONFIG, LOG, DEFAULT_RULES, BUILD_VERSION, h } from "./config.mjs";
-import { readRulesPref, writeRulesPref, getAIEngine } from "./rules.mjs";
+import { readRulesPref, writeRulesPref, getAIEngine, getPipShape } from "./rules.mjs";
 import {
   buildRulesEditor,
   buildSkipDomainsEditor,
@@ -224,6 +224,12 @@ const updateConditionalFields = (dialog) => {
   setHidden(findPrefRow(dialog, CONFIG.AI_CUSTOM_MODEL_PREF),         engine !== "custom");
   setHidden(findPrefRow(dialog, CONFIG.AI_CUSTOM_FORMAT_PREF),        engine !== "custom");
   setHidden(dialog.querySelector(".zao-provider-test"),               !isRemoteProvider);
+
+  // Each pip shape keeps its own size, so only surface the field for the shape
+  // currently selected — the other one stays stored, just out of the way.
+  const pipShape = getPipShape();
+  setHidden(findPrefRow(dialog, CONFIG.PIP_SIZE_CIRCLE_PREF), pipShape !== "circle");
+  setHidden(findPrefRow(dialog, CONFIG.PIP_SIZE_SQUARE_PREF), pipShape !== "square");
 };
 
 // First-time AI engine warning modals.
@@ -381,7 +387,8 @@ const maybeShowLocalWarning = () => {
   });
 };
 
-// Re-run the show/hide pass whenever the engine pref flips. One observer per
+// Re-run the show/hide pass whenever the engine pref flips, or the pip shape
+// changes (which swaps in that shape's size field). One observer per
 // preferences-window context, torn down with the rest on window unload.
 let enginePrefObserver = null;
 const setupEnginePrefObserver = () => {
@@ -389,6 +396,15 @@ const setupEnginePrefObserver = () => {
   enginePrefObserver = {
     observe(_subject, topic, data) {
       if (topic !== "nsPref:changed") return;
+      if (data === CONFIG.PIP_SHAPE_PREF) {
+        for (const d of document.querySelectorAll(".sineItemPreferenceDialog")) {
+          if (isOurDialog(d)) {
+            updateConditionalFields(d);
+            break;
+          }
+        }
+        return;
+      }
       if (data !== CONFIG.AI_ENGINE_PREF) return;
       const engine = getAIEngine();
       console.log(`${LOG} [ollama-warning] engine pref changed → "${engine}"`);
@@ -405,11 +421,13 @@ const setupEnginePrefObserver = () => {
     },
   };
   Services.prefs.addObserver(CONFIG.AI_ENGINE_PREF, enginePrefObserver);
+  Services.prefs.addObserver(CONFIG.PIP_SHAPE_PREF, enginePrefObserver);
 };
 
 const teardownEnginePrefObserver = () => {
   if (!enginePrefObserver) return;
   try { Services.prefs.removeObserver(CONFIG.AI_ENGINE_PREF, enginePrefObserver); } catch {}
+  try { Services.prefs.removeObserver(CONFIG.PIP_SHAPE_PREF, enginePrefObserver); } catch {}
   enginePrefObserver = null;
 };
 

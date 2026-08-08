@@ -498,8 +498,9 @@ export const teardownMinimalStylePrefObserver = () => {
 // and keeps its own fallbacks for the moment before this first runs.
 export const applyPipStyle = () => {
   try {
-    const size = getPipSize();
-    const radius = pipRadiusFor(getPipShape(), size);
+    const shape = getPipShape();
+    const size = getPipSize(shape);
+    const radius = pipRadiusFor(shape, size);
     const root = document.documentElement;
     root.style.setProperty("--zao-pip-size", `${size}px`);
     root.style.setProperty("--zao-pip-radius", radius);

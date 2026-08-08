@@ -42,8 +42,15 @@
   },
   {
     "type": "string",
-    "label": "Collapsed group marker size in pixels (4–24)",
-    "property": "extensions.zen-auto-organize.pip-size",
+    "label": "Circle marker size in pixels (4–24)",
+    "property": "extensions.zen-auto-organize.pip-size-circle",
+    "defaultValue": "8",
+    "placeholder": "8"
+  },
+  {
+    "type": "string",
+    "label": "Rounded square marker size in pixels (4–24)",
+    "property": "extensions.zen-auto-organize.pip-size-square",
     "defaultValue": "8",
     "placeholder": "8"
   },
