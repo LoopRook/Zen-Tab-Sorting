@@ -30,6 +30,23 @@
     "property": "extensions.zen-auto-organize.strict-rules",
     "defaultValue": false
   },
+  {
+    "type": "dropdown",
+    "label": "Collapsed group marker — the colored dot shown left of a collapsed group's name",
+    "property": "extensions.zen-auto-organize.pip-shape",
+    "defaultValue": "circle",
+    "options": [
+      { "label": "Circle", "value": "circle" },
+      { "label": "Rounded square", "value": "square" }
+    ]
+  },
+  {
+    "type": "string",
+    "label": "Collapsed group marker size in pixels (4–24)",
+    "property": "extensions.zen-auto-organize.pip-size",
+    "defaultValue": "8",
+    "placeholder": "8"
+  },
 
   {
     "type": "separator",

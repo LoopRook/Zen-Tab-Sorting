@@ -176,8 +176,9 @@ tab-group:not([split-view-group]) {
     box-shadow: none !important;
     outline: none !important;
     border-radius: var(--border-radius-medium, 6px) !important;
-    /* Room for the pip; matches the icon-container offset used when expanded. */
-    padding-inline-start: 18px !important;
+    /* Room for the pip: left inset + the pip itself + a gap, so the text keeps
+       clear of the dot at any configured size. */
+    padding-inline-start: calc(var(--zao-pip-size, 8px) + 10px) !important;
 
     &:hover {
       background-color: transparent !important;
@@ -189,9 +190,12 @@ tab-group:not([split-view-group]) {
       inset-inline-start: 4px;
       top: 50%;
       transform: translateY(-50%);
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
+      /* Size and shape come from the Look & Feel prefs — browser-hooks.mjs
+         publishes them onto the document root (applyPipStyle). The fallbacks
+         here are the original circle, used before that first runs. */
+      width: var(--zao-pip-size, 8px);
+      height: var(--zao-pip-size, 8px);
+      border-radius: var(--zao-pip-radius, 50%);
       background: var(--tab-group-background-color, var(--tab-group-color));
       pointer-events: none;
     }

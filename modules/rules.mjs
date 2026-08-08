@@ -2,7 +2,7 @@
 // Reads/writes the rules JSON pref, validates rules.json file contents, and exposes
 // the precedence chain (pref > file > built-in defaults).
 
-import { CONFIG, DEFAULT_RULES, LOG, ZEN_COLOR_NAMES, isValidHex } from "./config.mjs";
+import { CONFIG, DEFAULT_RULES, LOG, ZEN_COLOR_NAMES, isValidHex, normalizePipSize } from "./config.mjs";
 import { normalizeSortingMode } from "./sorting-mode.mjs";
 
 /**
@@ -164,6 +164,29 @@ export const isMinimalStyle = () => {
     return Services.prefs.getBoolPref(CONFIG.MINIMAL_STYLE_PREF, false);
   } catch {
     return false;
+  }
+};
+
+// Collapsed-group pip appearance. "circle" (default) or "square" — a rounded
+// square proportioned like the rest of Zen's rounded-square iconography.
+export const getPipShape = () => {
+  try {
+    return Services.prefs.getStringPref(CONFIG.PIP_SHAPE_PREF, "circle") === "square"
+      ? "square"
+      : "circle";
+  } catch {
+    return "circle";
+  }
+};
+
+// Pip diameter in px. Stored as a string pref (Sine has no number control), so
+// parse defensively and clamp — a blank or nonsense value falls back to the
+// original hard-coded size rather than producing an invisible or giant dot.
+export const getPipSize = () => {
+  try {
+    return normalizePipSize(Services.prefs.getStringPref(CONFIG.PIP_SIZE_PREF, ""));
+  } catch {
+    return CONFIG.PIP_SIZE_DEFAULT;
   }
 };
 

@@ -15,7 +15,7 @@ export const LOG = "[ZenTabSort]";
 // Build tag — mirrors theme.json's `version` for shipped releases, and gets a
 // `+tag.N` suffix for in-progress iterative builds so the Browser Console
 // reveals which build is actually running (vs. a stale module cache).
-export const BUILD_VERSION = "1.4.0";
+export const BUILD_VERSION = "1.5.0";
 
 export const CONFIG = {
   // Init polling — wait for gBrowser/gZenWorkspaces/separator to appear at startup.
@@ -50,6 +50,20 @@ export const CONFIG = {
   COLLAPSED_GROUPS_PREF: "extensions.zen-auto-organize.collapsed-groups-json",
   MINIMAL_STYLE_PREF: "extensions.zen-auto-organize.minimal-style",
   STRICT_RULES_PREF: "extensions.zen-auto-organize.strict-rules",
+
+  // Collapsed-group pip (the colored dot drawn left of a collapsed group's
+  // name — see userChrome.css). Both prefs share the `pip-` infix so a single
+  // prefix observer catches either one changing.
+  PIP_SHAPE_PREF: "extensions.zen-auto-organize.pip-shape",
+  PIP_SIZE_PREF: "extensions.zen-auto-organize.pip-size",
+  PIP_PREF_BRANCH: "extensions.zen-auto-organize.pip-",
+  PIP_SIZE_DEFAULT: 8,   // px — the original hard-coded size
+  PIP_SIZE_MIN: 4,
+  PIP_SIZE_MAX: 24,
+  // Rounded-square radius as a fraction of the pip's size. 1/4 matches the
+  // 16px/4px proportion Zen and the group icon chips use, so a square pip
+  // reads as the same family of rounded squares as the rest of the UI.
+  PIP_SQUARE_RADIUS_DIVISOR: 4,
 
   // AI Sorting (Pass 2). Engine governed by AI_ENGINE_PREF:
   //   "off"    — no AI pass
@@ -139,6 +153,23 @@ export const PRESET_COLORS = [
   { name: "gray",   hex: "#B0BAC0" },
   { name: "red",    hex: "#E87474" },
 ];
+
+// Collapsed-group pip helpers. Pure so they can be unit-tested outside the
+// browser; the pref-reading wrappers live in rules.mjs / browser-hooks.mjs.
+//
+// The size pref is a free-text string (Sine has no number control), so anything
+// unparseable falls back to the default rather than yielding an invisible or
+// oversized dot.
+export const normalizePipSize = (raw) => {
+  const parsed = Number.parseInt(String(raw ?? "").trim(), 10);
+  if (!Number.isFinite(parsed)) return CONFIG.PIP_SIZE_DEFAULT;
+  return Math.min(Math.max(parsed, CONFIG.PIP_SIZE_MIN), CONFIG.PIP_SIZE_MAX);
+};
+
+// "50%" renders a circle at any size; a square's radius scales with the pip so
+// it keeps the same rounded-square proportion as Zen's other small chips.
+export const pipRadiusFor = (shape, size) =>
+  shape === "square" ? `${size / CONFIG.PIP_SQUARE_RADIUS_DIVISOR}px` : "50%";
 
 export const ZEN_COLOR_NAMES = new Set(PRESET_COLORS.map((c) => c.name));
 export const HEX_BY_NAME = new Map(PRESET_COLORS.map((c) => [c.name, c.hex]));

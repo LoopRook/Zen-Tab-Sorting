@@ -20,9 +20,9 @@
 // `_zaoXxxHook` expando. This prevents double-install if the entry script is
 // re-evaluated (e.g. across module reloads during development).
 
-import { CONFIG, LOG, BUILD_VERSION, isZenColorName, isUnsetLabel } from "./config.mjs";
+import { CONFIG, LOG, BUILD_VERSION, isZenColorName, isUnsetLabel, pipRadiusFor } from "./config.mjs";
 import { getTabUrl, getHostname } from "./tabs.mjs";
-import { readRulesPref, writeRulesPref, readSkipDomainsPref, writeSkipDomainsPref, readCollapsedGroupsPref, writeCollapsedGroupsPref, isMinimalStyle } from "./rules.mjs";
+import { readRulesPref, writeRulesPref, readSkipDomainsPref, writeSkipDomainsPref, readCollapsedGroupsPref, writeCollapsedGroupsPref, isMinimalStyle, getPipShape, getPipSize } from "./rules.mjs";
 import { applyGroupColor, syncAllGroupColors, moveTabsToTop } from "./groups.mjs";
 
 // ─── Helpers (module level so they're reusable + easy to find) ───────────────
@@ -490,4 +490,46 @@ export const teardownMinimalStylePrefObserver = () => {
     console.warn(`${LOG} failed to remove minimal-style pref observer:`, e);
   }
   minimalStylePrefObserver = null;
+};
+
+// Collapsed-group pip: publish the user's shape/size choice to CSS as custom
+// properties on the document root. userChrome.css can't read prefs, so this is
+// the bridge — the stylesheet just reads var(--zao-pip-size / --zao-pip-radius)
+// and keeps its own fallbacks for the moment before this first runs.
+export const applyPipStyle = () => {
+  try {
+    const size = getPipSize();
+    const radius = pipRadiusFor(getPipShape(), size);
+    const root = document.documentElement;
+    root.style.setProperty("--zao-pip-size", `${size}px`);
+    root.style.setProperty("--zao-pip-radius", radius);
+  } catch (e) {
+    console.error(`${LOG} applyPipStyle error:`, e);
+  }
+};
+
+// One observer on the shared `…pip-` branch covers both the shape and size
+// prefs, so either edit re-renders the pips immediately.
+let pipStylePrefObserver = null;
+
+export const setupPipStylePrefObserver = () => {
+  if (pipStylePrefObserver) return;
+  pipStylePrefObserver = {
+    observe(_subject, topic) {
+      if (topic !== "nsPref:changed") return;
+      applyPipStyle();
+    },
+  };
+  Services.prefs.addObserver(CONFIG.PIP_PREF_BRANCH, pipStylePrefObserver);
+  console.log(`${LOG} pip-style pref observer installed`);
+};
+
+export const teardownPipStylePrefObserver = () => {
+  if (!pipStylePrefObserver) return;
+  try {
+    Services.prefs.removeObserver(CONFIG.PIP_PREF_BRANCH, pipStylePrefObserver);
+  } catch (e) {
+    console.warn(`${LOG} failed to remove pip-style pref observer:`, e);
+  }
+  pipStylePrefObserver = null;
 };

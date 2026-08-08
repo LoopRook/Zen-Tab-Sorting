@@ -23,6 +23,9 @@ import {
   setupCollapsedStatePersistence,
   setupMinimalStylePrefObserver,
   teardownMinimalStylePrefObserver,
+  applyPipStyle,
+  setupPipStylePrefObserver,
+  teardownPipStylePrefObserver,
 } from "./modules/browser-hooks.mjs";
 import {
   setupSettingsObserver,
@@ -51,6 +54,8 @@ const tryInitializeBrowser = () => {
       setupTabGroupCreateHook();
       setupCollapsedStatePersistence();
       setupMinimalStylePrefObserver();
+      applyPipStyle();
+      setupPipStylePrefObserver();
       window.ZenTabSorting = Object.freeze({
         buildVersion: BUILD_VERSION,
         handleOrganizeClick: async () => {
@@ -133,6 +138,7 @@ const cleanup = () => {
     teardownTabContextMenu();
     teardownTabGroupContextMenu();
     teardownMinimalStylePrefObserver();
+    teardownPipStylePrefObserver();
   } catch (e) {
     console.error(`${LOG} cleanup error:`, e);
   }
