@@ -148,7 +148,7 @@
     "label": "Gemini model",
     "property": "extensions.zen-auto-organize.ai-gemini-model",
     "defaultValue": "",
-    "placeholder": "gemini-2.0-flash"
+    "placeholder": "gemini-2.5-flash"
   },
   {
     "type": "string",

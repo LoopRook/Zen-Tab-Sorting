@@ -311,6 +311,28 @@ tab-group:not([split-view-group]) {
   cursor: pointer !important;
 }
 
+/* "Test connection" row under the Remote Provider Settings separator.
+   Button reuses .zao-backup-btn; the status span shows the probe outcome. */
+.zao-provider-test {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  margin: 8px 0 !important;
+  padding: 0 12px !important;
+}
+.zao-provider-test-status {
+  font-size: 12px;
+  opacity: 0.85;
+}
+.zao-provider-test-status[data-state="ok"] {
+  color: light-dark(#1a7f37, #57d97a);
+  opacity: 1;
+}
+.zao-provider-test-status[data-state="err"] {
+  color: light-dark(#b42318, #ff8d80);
+  opacity: 1;
+}
+
 .zao-backup-btn:hover {
   background: color-mix(in srgb, currentColor 16%, transparent) !important;
 }

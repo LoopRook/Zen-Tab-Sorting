@@ -13,6 +13,7 @@ import {
   teardownSkipPrefObserver,
 } from "./widget.mjs";
 import { fetchZenColorsFromBrowser } from "./color-picker.mjs";
+import { testProviderConnection } from "./remote-provider.mjs";
 
 console.log(`[ZenTabSort] prefs-ui.mjs loaded — v${BUILD_VERSION}`);
 
@@ -222,6 +223,7 @@ const updateConditionalFields = (dialog) => {
   setHidden(findPrefRow(dialog, CONFIG.AI_CUSTOM_API_KEY_PREF),       engine !== "custom");
   setHidden(findPrefRow(dialog, CONFIG.AI_CUSTOM_MODEL_PREF),         engine !== "custom");
   setHidden(findPrefRow(dialog, CONFIG.AI_CUSTOM_FORMAT_PREF),        engine !== "custom");
+  setHidden(dialog.querySelector(".zao-provider-test"),               !isRemoteProvider);
 };
 
 // First-time AI engine warning modals.
@@ -430,6 +432,50 @@ const insertAfter = (parent, newNode, refNode) => {
   }
 };
 
+// "Test connection" row for the Remote Provider Settings section. One click
+// fires a minimal probe through the SAME readiness gate + request path as a
+// real sort, then shows the outcome inline — so key/model problems surface as
+// the exact provider error instead of a silent no-op sort.
+const buildProviderTestSection = () => {
+  const container = h("div", { class: "zao-provider-test" });
+  const button = h("button", { text: "Test connection" });
+  button.className = "zao-backup-btn";
+  const status = h("span", { class: "zao-provider-test-status" });
+  container.append(button, status);
+
+  button.addEventListener("click", async () => {
+    button.disabled = true;
+    status.textContent = "Testing…";
+    status.removeAttribute("data-state");
+    try {
+      const result = await testProviderConnection();
+      if (result.ok) {
+        status.textContent = "Connected — provider replied.";
+        status.dataset.state = "ok";
+      } else if (result.reason === "consent_required") {
+        status.textContent = "Consent required — tick the data-sending checkbox above first.";
+        status.dataset.state = "err";
+      } else if (result.reason === "missing_required_config") {
+        status.textContent = `Missing: ${(result.missingFields || []).join(", ")}.`;
+        status.dataset.state = "err";
+      } else if (result.reason === "provider_disabled") {
+        status.textContent = "Select a remote AI engine (OpenAI-compatible, Gemini, or Custom) first.";
+        status.dataset.state = "err";
+      } else {
+        status.textContent = `Failed: ${result.error || result.reason}`;
+        status.dataset.state = "err";
+      }
+    } catch (e) {
+      status.textContent = `Failed: ${e?.message || e}`;
+      status.dataset.state = "err";
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  return container;
+};
+
 const performInject = (dialog) => {
   if (dialog.querySelector(".zao-rules-editor")) return;
 
@@ -458,6 +504,7 @@ const performInject = (dialog) => {
   insertAfter(content, rulesEditor, findSeparatorContainer(dialog, "Group Rules"));
   insertAfter(content, skipEditor, findSeparatorContainer(dialog, "Skip Domains"));
   insertAfter(content, backupSection, findSeparatorContainer(dialog, "Backup & Restore"));
+  insertAfter(content, buildProviderTestSection(), findSeparatorContainer(dialog, "Remote Provider Settings"));
 
   tagSeparatorContainers(dialog);
   injectSectionDescriptions(dialog);

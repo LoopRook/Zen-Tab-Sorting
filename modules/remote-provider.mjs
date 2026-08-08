@@ -23,6 +23,23 @@ const stripMetaPrefix = (s) => s
   .replace(/^\s*(?:new\s+)?(?:category|label|topic|bucket|group)\s*[:\-–]\s*/i, "")
   .trim();
 
+// One-click connectivity probe for the settings dialog's "Test connection"
+// button. Runs the SAME readiness gate as a real sort (consent stays required —
+// a test request still sends data to the provider), then issues a minimal
+// prompt. Returns a plain result object; never throws.
+export const testProviderConnection = async (settings = readProviderSettings(Services.prefs)) => {
+  const readiness = getProviderReadiness(settings);
+  if (!readiness.ok) {
+    return { ok: false, reason: readiness.reason, missingFields: readiness.missingFields || [] };
+  }
+  try {
+    const reply = await providerText(readiness.value, "Reply with the single word: ok", 16);
+    return { ok: true, reply: reply.slice(0, 60) };
+  } catch (e) {
+    return { ok: false, reason: "request_failed", error: e?.message || String(e) };
+  }
+};
+
 export const classifyExistingGroupsRemoteBatch = async (pendingTabs, rules, settings = readProviderSettings(Services.prefs)) => {
   if (!pendingTabs?.length || !rules?.length) return new Map();
   const readiness = getProviderReadiness(settings);
