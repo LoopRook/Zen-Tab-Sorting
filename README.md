@@ -45,6 +45,8 @@ The three remote engines send tab titles, URLs and optional page snippets to whi
 
 There's a Test connection button under Remote Provider Settings. It runs one small request through the same checks a real sort uses and reports back what happened, so a wrong key or model shows you the actual error instead of a sort that quietly does nothing.
 
+The OpenAI-compatible engine covers both OpenAI itself and anything that speaks the same API, local servers like Ollama's OpenAI shim and LM Studio included. Type the model id the service lists, say `gpt-5.6-luna` or `gpt-4o-mini` against `https://api.openai.com/v1`, or whatever name your local server reports. You do not have to care which generation it is. Newer OpenAI models changed the request parameters and reject the ones older models require, so the mod sends one shape, reads the rejection if it comes back, retries with the other, and remembers which one that endpoint and model wanted.
+
 Gemini model names are forgiving: `gemini-2.5-flash`, `models/gemini-2.5-flash` and `Gemini 2.5 Flash` all work, and stray whitespace around keys and endpoints is trimmed.
 
 ## Settings

@@ -5,7 +5,15 @@
 
 import { LOG } from "./config.mjs";
 import { getProviderReadiness } from "./provider-readiness.mjs";
-import { buildProviderRequest, getProviderKind, parseProviderResponse } from "./provider-requests.mjs";
+import {
+  buildProviderRequest,
+  getProviderKind,
+  guessParamStyle,
+  isParamStyleError,
+  parseProviderResponse,
+  PARAM_STYLE_CLASSIC,
+  PARAM_STYLE_MODERN,
+} from "./provider-requests.mjs";
 import { readProviderSettings } from "./provider-settings.mjs";
 import { buildClassifyPrompt, buildClusterPrompt, buildUnifiedPrompt, buildFreshPrompt } from "./ollama-prompts.mjs";
 import { consolidateNewGroups } from "./new-group-consolidation.mjs";
@@ -254,23 +262,48 @@ const resolveFetch = () => {
   return fetch;
 };
 
-const providerText = async (settings, prompt, maxTokens) => {
-  const request = buildProviderRequest(settings, prompt, maxTokens);
+const sendProviderRequest = async (request) => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), GENERATE_TIMEOUT_MS);
-  let response;
   try {
     const doFetch = resolveFetch();
-    response = await doFetch(request.url, { ...request.init, signal: controller.signal });
+    const response = await doFetch(request.url, { ...request.init, signal: controller.signal });
+    return { response, body: await response.text() };
   } catch (e) {
     throw new Error(e.name === "AbortError" ? `timeout after ${GENERATE_TIMEOUT_MS}ms` : (e.message || String(e)));
   } finally {
     clearTimeout(timer);
   }
+};
 
-  const body = await response.text();
+// Which OpenAI parameter shape an endpoint and model accepted, remembered so a
+// sort pays the extra round trip once rather than on every batch. In-memory on
+// purpose: the shape belongs to the model, not to the user's settings, and
+// re-learning it after a restart costs one rejected request.
+const paramStyleByTarget = new Map();
+
+const providerText = async (settings, prompt, maxTokens) => {
+  const kind = getProviderKind(settings);
+  // Only the OpenAI-shaped kinds have the max_tokens split. Gemini and Ollama
+  // take their own parameters and are left alone.
+  const adaptive = kind === "openai";
+  const target = `${settings.endpoint || ""}\x00${settings.model || ""}`;
+  let style = adaptive
+    ? paramStyleByTarget.get(target) || guessParamStyle(settings.model)
+    : PARAM_STYLE_CLASSIC;
+
+  let { response, body } = await sendProviderRequest(buildProviderRequest(settings, prompt, maxTokens, style));
+
+  if (adaptive && !response.ok && isParamStyleError(response.status, body)) {
+    const retryStyle = style === PARAM_STYLE_MODERN ? PARAM_STYLE_CLASSIC : PARAM_STYLE_MODERN;
+    console.log(`${LOG} provider rejected the ${style} parameter shape, retrying as ${retryStyle}`);
+    ({ response, body } = await sendProviderRequest(buildProviderRequest(settings, prompt, maxTokens, retryStyle)));
+    style = retryStyle;
+  }
+
   if (!response.ok) throw new Error(`HTTP ${response.status}: ${body.slice(0, 200)}`);
-  const text = parseProviderResponse(getProviderKind(settings), body);
+  if (adaptive) paramStyleByTarget.set(target, style);
+  const text = parseProviderResponse(kind, body);
   if (typeof text !== "string" || !text.trim()) throw new Error("Provider response did not contain text");
   return text.trim();
 };

@@ -1,7 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { classifyExistingGroupsRemoteBatch, runPass2Remote, runPass2RemoteFresh } from "../modules/remote-provider.mjs";
+import {
+  classifyExistingGroupsRemoteBatch,
+  runPass2Remote,
+  runPass2RemoteFresh,
+  testProviderConnection,
+} from "../modules/remote-provider.mjs";
 
 test("Given ready OpenAI provider When remote Pass 2 runs Then it returns an applyPass2-shaped plan", async () => {
   const originalFetch = globalThis.fetch;
@@ -152,4 +157,117 @@ test("Given full AI remote sorting over many tabs When provider is called Then f
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+// The GPT-5 generation rejects max_tokens and a non-default temperature, while
+// local OpenAI-compatible servers only understand those. These cover the
+// handshake that lets one engine serve both.
+
+const okBody = () => JSON.stringify({ choices: [{ message: { content: "ok" } }] });
+
+const unsupportedParamBody = JSON.stringify({
+  error: { message: "Unsupported parameter: 'max_tokens' is not supported with this model. Use 'max_completion_tokens' instead." },
+});
+
+const withStubbedFetch = async (handler, run) => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url, body: JSON.parse(init.body) });
+    return handler(calls.length);
+  };
+  try {
+    return await run(calls);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+};
+
+test("Given a GPT-5 model name When testing the connection Then the first request already uses max_completion_tokens", async () => {
+  await withStubbedFetch(
+    () => new Response(okBody(), { status: 200 }),
+    async (calls) => {
+      const result = await testProviderConnection({
+        provider: "openai",
+        consentToSendData: true,
+        endpoint: "https://api.openai.test/v1",
+        apiKey: "sk-test",
+        model: "gpt-5.6-luna",
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(calls.length, 1);
+      assert.equal(calls[0].body.max_completion_tokens, 64);
+      assert.equal("max_tokens" in calls[0].body, false);
+    },
+  );
+});
+
+test("Given a server that rejects max_tokens When a request is sent Then it retries once with the modern shape and remembers it", async () => {
+  await withStubbedFetch(
+    (n) => (n === 1
+      ? new Response(unsupportedParamBody, { status: 400 })
+      : new Response(okBody(), { status: 200 })),
+    async (calls) => {
+      const settings = {
+        provider: "openai",
+        consentToSendData: true,
+        endpoint: "https://gateway.example.test/v1",
+        apiKey: "sk-test",
+        model: "house-model",
+      };
+
+      const first = await testProviderConnection(settings);
+      assert.equal(first.ok, true);
+      assert.equal(calls.length, 2);
+      assert.equal(calls[0].body.max_tokens, 64);
+      assert.equal(calls[0].body.temperature, 0.2);
+      assert.equal(calls[1].body.max_completion_tokens, 64);
+      assert.equal("temperature" in calls[1].body, false);
+
+      // The detected shape is cached, so the second call does not pay for the
+      // rejected request again.
+      const second = await testProviderConnection(settings);
+      assert.equal(second.ok, true);
+      assert.equal(calls.length, 3);
+      assert.equal(calls[2].body.max_completion_tokens, 64);
+    },
+  );
+});
+
+test("Given a 400 that is not about parameters When a request is sent Then it fails without a retry", async () => {
+  await withStubbedFetch(
+    () => new Response(JSON.stringify({ error: { message: "The model `nope` does not exist" } }), { status: 400 }),
+    async (calls) => {
+      const result = await testProviderConnection({
+        provider: "openai",
+        consentToSendData: true,
+        endpoint: "https://api.openai.test/v1",
+        apiKey: "sk-test",
+        model: "nope",
+      });
+
+      assert.equal(result.ok, false);
+      assert.equal(calls.length, 1);
+      assert.match(result.error, /does not exist/);
+    },
+  );
+});
+
+test("Given an Ollama provider When a request is sent Then no parameter-shape retry is attempted", async () => {
+  await withStubbedFetch(
+    () => new Response(JSON.stringify({ error: { message: "Unsupported parameter: 'max_tokens'" } }), { status: 400 }),
+    async (calls) => {
+      const result = await testProviderConnection({
+        provider: "ollama",
+        consentToSendData: true,
+        endpoint: "http://localhost:11434",
+        apiKey: "",
+        model: "llama3.2",
+      });
+
+      assert.equal(result.ok, false);
+      assert.equal(calls.length, 1);
+    },
+  );
 });
