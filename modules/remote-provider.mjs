@@ -7,12 +7,12 @@ import { LOG } from "./config.mjs";
 import { getProviderReadiness } from "./provider-readiness.mjs";
 import {
   buildProviderRequest,
+  describeEmptyResponse,
   getProviderKind,
-  guessParamStyle,
   isParamStyleError,
+  paramStyleLadder,
   parseProviderResponse,
   PARAM_STYLE_CLASSIC,
-  PARAM_STYLE_MODERN,
 } from "./provider-requests.mjs";
 import { readProviderSettings } from "./provider-settings.mjs";
 import { buildClassifyPrompt, buildClusterPrompt, buildUnifiedPrompt, buildFreshPrompt } from "./ollama-prompts.mjs";
@@ -284,27 +284,36 @@ const paramStyleByTarget = new Map();
 
 const providerText = async (settings, prompt, maxTokens) => {
   const kind = getProviderKind(settings);
-  // Only the OpenAI-shaped kinds have the max_tokens split. Gemini and Ollama
+  // Only the OpenAI-shaped kinds have the parameter split. Gemini and Ollama
   // take their own parameters and are left alone.
   const adaptive = kind === "openai";
   const target = `${settings.endpoint || ""}\x00${settings.model || ""}`;
-  let style = adaptive
-    ? paramStyleByTarget.get(target) || guessParamStyle(settings.model)
-    : PARAM_STYLE_CLASSIC;
+  const cached = adaptive ? paramStyleByTarget.get(target) : null;
+  const ladder = !adaptive
+    ? [PARAM_STYLE_CLASSIC]
+    : cached
+      ? [cached]
+      : paramStyleLadder(settings.model);
 
-  let { response, body } = await sendProviderRequest(buildProviderRequest(settings, prompt, maxTokens, style));
-
-  if (adaptive && !response.ok && isParamStyleError(response.status, body)) {
-    const retryStyle = style === PARAM_STYLE_MODERN ? PARAM_STYLE_CLASSIC : PARAM_STYLE_MODERN;
-    console.log(`${LOG} provider rejected the ${style} parameter shape, retrying as ${retryStyle}`);
-    ({ response, body } = await sendProviderRequest(buildProviderRequest(settings, prompt, maxTokens, retryStyle)));
-    style = retryStyle;
+  let response;
+  let body;
+  let style;
+  // Walk the ladder while the provider is specifically rejecting the shape of
+  // the request. Any other failure is the caller's problem, not ours.
+  for (const candidate of ladder) {
+    style = candidate;
+    ({ response, body } = await sendProviderRequest(buildProviderRequest(settings, prompt, maxTokens, candidate)));
+    if (response.ok || !isParamStyleError(response.status, body)) break;
+    console.log(`${LOG} provider rejected the ${candidate} parameter shape`);
   }
 
   if (!response.ok) throw new Error(`HTTP ${response.status}: ${body.slice(0, 200)}`);
   if (adaptive) paramStyleByTarget.set(target, style);
   const text = parseProviderResponse(kind, body);
-  if (typeof text !== "string" || !text.trim()) throw new Error("Provider response did not contain text");
+  if (typeof text !== "string" || !text.trim()) {
+    const detail = describeEmptyResponse(kind, body);
+    throw new Error(`Provider response did not contain text${detail ? ` (${detail})` : ""}`);
+  }
   return text.trim();
 };
 

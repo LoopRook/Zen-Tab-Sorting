@@ -5,10 +5,13 @@ import {
   buildProviderRequest,
   getProviderKind,
   guessParamStyle,
+  describeEmptyResponse,
   isParamStyleError,
+  paramStyleLadder,
   parseProviderResponse,
   PARAM_STYLE_CLASSIC,
   PARAM_STYLE_MODERN,
+  PARAM_STYLE_MODERN_BARE,
 } from "../modules/provider-requests.mjs";
 
 test("Given OpenAI-compatible provider When building request Then chat completions payload and auth header are used", () => {
@@ -70,7 +73,10 @@ test("Given the modern parameter style When building an OpenAI request Then max_
   }, "sort tabs", 800, PARAM_STYLE_MODERN);
 
   const body = JSON.parse(request.init.body);
-  assert.equal(body.max_completion_tokens, 800);
+  // The requested budget gains reasoning headroom, because these models bill
+  // their hidden reasoning against the same ceiling.
+  assert.equal(body.max_completion_tokens, 800 + 4096);
+  assert.equal(body.reasoning_effort, "low");
   assert.equal("max_tokens" in body, false);
   assert.equal("temperature" in body, false);
 });
@@ -112,4 +118,66 @@ test("Given a provider error body When checking for a parameter-shape failure Th
   assert.equal(isParamStyleError(400, JSON.stringify({ error: { message: "The model `nope` does not exist" } })), false);
   assert.equal(isParamStyleError(401, unsupported), false);
   assert.equal(isParamStyleError(429, JSON.stringify({ error: { message: "quota exceeded" } })), false);
+});
+
+test("Given a tiny requested budget When building a modern request Then the floor leaves room to reason and still answer", () => {
+  const request = buildProviderRequest({
+    provider: "openai",
+    endpoint: "https://api.openai.com/v1",
+    apiKey: "sk-test",
+    model: "gpt-5-nano",
+    consentToSendData: true,
+  }, "Reply with the single word: ok", 16, PARAM_STYLE_MODERN);
+
+  // 16 output tokens would be spent entirely on hidden reasoning, returning
+  // an empty message with finish_reason "length".
+  assert.equal(JSON.parse(request.init.body).max_completion_tokens, 16 + 4096);
+});
+
+test("Given a large requested budget When building a modern request Then it is capped", () => {
+  const request = buildProviderRequest({
+    provider: "openai",
+    endpoint: "https://api.openai.com/v1",
+    apiKey: "sk-test",
+    model: "gpt-5-nano",
+    consentToSendData: true,
+  }, "sort tabs", 99999, PARAM_STYLE_MODERN);
+
+  assert.equal(JSON.parse(request.init.body).max_completion_tokens, 16384);
+});
+
+test("Given the bare modern style When building a request Then reasoning_effort is omitted", () => {
+  const request = buildProviderRequest({
+    provider: "openai",
+    endpoint: "https://gateway.example.test/v1",
+    apiKey: "sk-test",
+    model: "gpt-5-nano",
+    consentToSendData: true,
+  }, "sort tabs", 800, PARAM_STYLE_MODERN_BARE);
+
+  const body = JSON.parse(request.init.body);
+  assert.equal(body.max_completion_tokens, 800 + 4096);
+  assert.equal("reasoning_effort" in body, false);
+});
+
+test("Given a model name When building the style ladder Then the likely shape is tried first", () => {
+  assert.deepEqual(paramStyleLadder("gpt-5-nano"), [PARAM_STYLE_MODERN, PARAM_STYLE_MODERN_BARE, PARAM_STYLE_CLASSIC]);
+  assert.deepEqual(paramStyleLadder("llama3.2"), [PARAM_STYLE_CLASSIC, PARAM_STYLE_MODERN, PARAM_STYLE_MODERN_BARE]);
+});
+
+test("Given an unsupported reasoning_effort When checking the error Then the ladder keeps walking", () => {
+  const body = JSON.stringify({ error: { message: "Unrecognized request argument supplied: reasoning_effort" } });
+  assert.equal(isParamStyleError(400, body), true);
+});
+
+test("Given a reasoning model that spent its budget thinking When describing the response Then the cause is named", () => {
+  const body = JSON.stringify({
+    choices: [{ finish_reason: "length", message: { content: "" } }],
+    usage: { completion_tokens_details: { reasoning_tokens: 64 } },
+  });
+
+  const detail = describeEmptyResponse("openai", body);
+  assert.match(detail, /finish_reason=length/);
+  assert.match(detail, /reasoning_tokens=64/);
+  assert.equal(describeEmptyResponse("ollama", body), "");
 });
