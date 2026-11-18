@@ -166,8 +166,9 @@ tab-group:not([split-view-group]) {
 
    Scoped to the expanded sidebar: when the sidebar is icon-only the label is
    hidden and the colored chip is the ONLY affordance for the group, so it is
-   deliberately left native there. */
-:root[zen-sidebar-expanded] :is(tab-group, zen-folder)[collapsed]:not([split-view-group]) {
+   deliberately left native there. Scoped to tab-group for the same reason the
+   open-state block below is: a zen-folder has its own icon and padding. */
+:root[zen-sidebar-expanded] tab-group[collapsed]:not([split-view-group]) {
   .tab-group-label {
     position: relative;
     background: transparent !important;
@@ -214,9 +215,13 @@ tab-group:not([split-view-group]) {
    at a glance without losing its color. Governed by the "When a group is open"
    setting — browser-hooks.mjs resolves it to these properties, and sets the size
    to 0 / display none for the "No marker" choice (how the open state looked
-   before this was configurable). Zen's tab-group renders no icon of its own —
-   just a label container and label — so there is nothing here to collide with. */
-:root[zen-sidebar-expanded] :is(tab-group, zen-folder):not([collapsed]):not([split-view-group]) {
+   before this was configurable).
+
+   Tab groups only, never zen-folder. A folder draws its own icon and carries
+   its own inline-start padding, so forcing the marker's inset onto a folder
+   label overrides that padding and lands the pip on top of the icon. Folders
+   are left entirely native. */
+:root[zen-sidebar-expanded] tab-group:not([collapsed]):not([split-view-group]) {
   .tab-group-label {
     position: relative;
     padding-inline-start: var(--zao-pip-open-pad, 4px) !important;
