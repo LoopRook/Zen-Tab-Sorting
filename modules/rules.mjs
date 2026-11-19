@@ -4,6 +4,7 @@
 
 import { CONFIG, DEFAULT_RULES, LOG, ZEN_COLOR_NAMES, isValidHex, normalizePipSize, pipSizePrefFor } from "./config.mjs";
 import { normalizeSortingMode } from "./sorting-mode.mjs";
+import { parseCollapsedEntries, serializeCollapsedEntries } from "./collapsed-state.mjs";
 
 /**
  * Read the rules pref written by the settings widget.
@@ -93,24 +94,21 @@ export const writeSkipDomainsPref = (domains) => {
 
 // Collapsed-group persistence. Zen's session manager doesn't save the
 // `collapsed` attribute on tab-groups, so they all come back expanded after
-// a browser restart. We track which group labels were collapsed in a pref
-// and re-apply on TabGroupCreate (session restore).
+// a browser restart. We remember each group's state by id in a pref and
+// re-apply on TabGroupCreate (session restore). Format and migration from the
+// old label list: modules/collapsed-state.mjs.
 export const readCollapsedGroupsPref = () => {
   try {
-    const raw = Services.prefs.getStringPref(CONFIG.COLLAPSED_GROUPS_PREF, "");
-    if (!raw.trim()) return new Set();
-    const arr = JSON.parse(raw);
-    return new Set(Array.isArray(arr) ? arr.filter((s) => typeof s === "string") : []);
+    return parseCollapsedEntries(Services.prefs.getStringPref(CONFIG.COLLAPSED_GROUPS_PREF, ""));
   } catch (e) {
-    console.warn(`${LOG} collapsed-groups pref parse failed:`, e);
-    return new Set();
+    console.warn(`${LOG} collapsed-groups pref read failed:`, e);
+    return [];
   }
 };
 
-export const writeCollapsedGroupsPref = (labels) => {
+export const writeCollapsedGroupsPref = (entries) => {
   try {
-    const arr = Array.from(labels);
-    Services.prefs.setStringPref(CONFIG.COLLAPSED_GROUPS_PREF, JSON.stringify(arr));
+    Services.prefs.setStringPref(CONFIG.COLLAPSED_GROUPS_PREF, serializeCollapsedEntries(entries));
   } catch (e) {
     console.error(`${LOG} failed to write collapsed-groups pref:`, e);
   }

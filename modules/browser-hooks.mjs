@@ -23,6 +23,7 @@
 import { CONFIG, LOG, BUILD_VERSION, isZenColorName, isUnsetLabel, pipMetrics } from "./config.mjs";
 import { getTabUrl, getHostname } from "./tabs.mjs";
 import { readRulesPref, writeRulesPref, readSkipDomainsPref, writeSkipDomainsPref, readCollapsedGroupsPref, writeCollapsedGroupsPref, isMinimalStyle, getPipShape, getPipSize, getPipOpenBehavior } from "./rules.mjs";
+import { isSavedCollapsed, migrateLegacyEntries, updateCollapsedEntries } from "./collapsed-state.mjs";
 import { applyGroupColor, syncAllGroupColors, moveTabsToTop } from "./groups.mjs";
 
 // ─── Helpers (module level so they're reusable + easy to find) ───────────────
@@ -333,8 +334,9 @@ export const teardownTabGroupContextMenu = () => {
 // On every tab-group creation (including session restore on startup), re-apply the
 // rule's color so it survives across browser restarts even if Zen's session storage
 // dropped our previously-set color.
-// Apply our saved state to a tab-group: re-collapse if its label is in the
-// collapsed-set pref, and re-apply its rule color. Used both as the
+// Apply our saved state to a tab-group: re-collapse it if the collapsed-state
+// pref says so (by group id; see collapsed-state.mjs), and re-apply its rule
+// color. Used both as the
 // TabGroupCreate event handler (for newly-created groups) and at install
 // time (for groups Zen restored before our script loaded).
 const applyTabGroupRestoreState = (group) => {
@@ -347,8 +349,9 @@ const applyTabGroupRestoreState = (group) => {
     // before we toggle. Use the property setter, not setAttribute, so
     // Firefox also updates aria-hidden on inner tabs (which the collapse
     // CSS rule relies on).
-    const collapsedSet = readCollapsedGroupsPref();
-    if (collapsedSet.has(label)) {
+    const entries = readCollapsedGroupsPref();
+    if (entries.some((e) => !e.id && e.label === label)) scheduleLegacyCollapseMigration();
+    if (isSavedCollapsed(entries, { id: group.id, label })) {
       setTimeout(() => {
         if (!group.isConnected) return;
         let applied = false;
@@ -380,6 +383,31 @@ const applyTabGroupRestoreState = (group) => {
   }
 };
 
+// Old installs stored collapsed groups by label. Once restored groups exist
+// (and their saved collapse has been applied), give each matching group its
+// own id entry and drop the label entry. Debounced: session restore creates
+// groups in a burst.
+let legacyMigrationTimer = null;
+const scheduleLegacyCollapseMigration = () => {
+  clearTimeout(legacyMigrationTimer);
+  legacyMigrationTimer = setTimeout(() => {
+    try {
+      const groups = [...document.querySelectorAll("tab-group")].map((g) => ({
+        id: g.id,
+        label: g.getAttribute("label"),
+        collapsed: g.hasAttribute("collapsed"),
+      }));
+      const next = migrateLegacyEntries(readCollapsedGroupsPref(), groups);
+      if (next) {
+        writeCollapsedGroupsPref(next);
+        console.log(`${LOG} collapsed-state: migrated label entries to group ids`);
+      }
+    } catch (e) {
+      console.warn(`${LOG} collapsed-state migration failed:`, e);
+    }
+  }, 1500);
+};
+
 export const setupTabGroupCreateHook = () => {
   if (typeof gBrowser === "undefined" || !gBrowser.tabContainer) return;
   if (gBrowser.tabContainer._zaoTabGroupCreateHook) return;
@@ -398,23 +426,22 @@ export const setupTabGroupCreateHook = () => {
   console.log(`${LOG} TabGroupCreate hook installed`);
 };
 
-// Watch every tab-group's `collapsed` attribute and persist the current set
-// of collapsed labels to the pref. Re-applied on TabGroupCreate (above) so
+// Watch every tab-group's `collapsed` attribute and persist each group's
+// state (by id) to the pref. Re-applied on TabGroupCreate (above) so
 // the user's collapse choices survive browser restarts.
 export const setupCollapsedStatePersistence = () => {
   if (window._zaoCollapseObserverInstalled) return;
   window._zaoCollapseObserverInstalled = true;
 
   const persist = (group) => {
-    const label = group.getAttribute?.("label");
-    if (!label) return;
-    const isCollapsed = group.hasAttribute("collapsed");
-    const set = readCollapsedGroupsPref();
-    const had = set.has(label);
-    if (isCollapsed && !had) set.add(label);
-    else if (!isCollapsed && had) set.delete(label);
-    else return; // no change
-    writeCollapsedGroupsPref(set);
+    const label = group.getAttribute?.("label") || "";
+    if (!label && !group.id) return;
+    const next = updateCollapsedEntries(
+      readCollapsedGroupsPref(),
+      { id: group.id, label },
+      group.hasAttribute("collapsed"),
+    );
+    if (next) writeCollapsedGroupsPref(next);
   };
 
   const watch = (group) => {
