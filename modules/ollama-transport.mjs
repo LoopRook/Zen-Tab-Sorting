@@ -129,8 +129,19 @@ export const ollamaGenerateJson = async (host, model, prompt) => {
     const body = await res.text().catch(() => "");
     return { ok: false, errorType: "http", error: `HTTP ${res.status}: ${body.slice(0, 200)}` };
   }
-  const data = await res.json();
+  let data;
+  try {
+    data = await res.json();
+  } catch (e) {
+    // A proxy or a crashed runner can answer 200 with a non-JSON body.
+    return { ok: false, errorType: "parse", error: `Ollama response was not JSON: ${e.message || e}` };
+  }
   const text = (data?.response || "").trim();
+  // Cut off at the output limit: the JSON may still parse but be missing tabs.
+  // (From upstream OpenTabSort-Zen d1a0022.)
+  if (data?.done_reason === "length") {
+    return { ok: false, errorType: "parse", error: "Ollama response hit its output limit (done_reason=length)" };
+  }
   if (!text) {
     return { ok: false, errorType: "empty", error: "Ollama returned empty response" };
   }
