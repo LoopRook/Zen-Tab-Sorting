@@ -7,7 +7,20 @@
 
 import { LOG } from "./config.mjs";
 
+// The same message raised twice in quick succession (a readiness failure hit
+// by each batch, or by a modal callback right after the main pass) is shown
+// once. Different messages always go through.
+const TOAST_REPEAT_WINDOW_MS = 4000;
+const lastShownAt = new Map();
+
 export const showToast = (message) => {
+  const now = Date.now();
+  if (now - (lastShownAt.get(message) ?? -Infinity) < TOAST_REPEAT_WINDOW_MS) {
+    console.log(`${LOG} toast suppressed (repeat): ${message}`);
+    return;
+  }
+  lastShownAt.set(message, now);
+  if (lastShownAt.size > 50) lastShownAt.delete(lastShownAt.keys().next().value);
   try {
     if (typeof gZenUIManager !== "undefined" && typeof gZenUIManager.showToast === "function") {
       console.log(`${LOG} toast: ${message}`);

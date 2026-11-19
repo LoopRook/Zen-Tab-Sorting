@@ -81,7 +81,24 @@ const assignmentMapToPlan = (tabs, assignmentMap) => {
   return { assignments, skipped };
 };
 
+// One sort at a time per window. A second click while the AI is still
+// thinking (or while the Plan Mode modal is open) used to start a second,
+// overlapping sort over the same tabs; now it is ignored with a log line.
 export const handleOrganizeClick = async () => {
+  if (window._zaoSortRunning) {
+    console.log(`${LOG} sort already running in this window — click ignored`);
+    wiggleButton();
+    return;
+  }
+  window._zaoSortRunning = true;
+  try {
+    await runOrganize();
+  } finally {
+    window._zaoSortRunning = false;
+  }
+};
+
+const runOrganize = async () => {
   wiggleButton();
 
   const workspaceId = window.gZenWorkspaces?.activeWorkspace;
@@ -437,6 +454,15 @@ export const handleOrganizeClick = async () => {
             if (planToApply === null) {
               console.log(`${LOG} ${modalReason}: user cancelled — no changes applied`);
             }
+          }
+
+          // The AI call can take a while. If the user switched workspace in
+          // the meantime, applying now would build groups in whichever
+          // workspace is active, not the one that was sorted. Drop the plan.
+          if (planToApply && window.gZenWorkspaces?.activeWorkspace !== workspaceId) {
+            console.log(`${LOG} workspace changed during Pass 2 — AI results not applied`);
+            showToast("You switched workspace while the AI was sorting, so its results were not applied. Click again to sort this one.");
+            planToApply = null;
           }
 
           if (planToApply) {
