@@ -47,3 +47,16 @@ test("Given local Ollama provider When readiness is checked Then data consent is
 
   assert.equal(result.ok, true);
 });
+
+test("Given a Custom OpenAI-format server without a key When readiness is checked Then it is ready", () => {
+  const result = getProviderReadiness({
+    provider: "custom",
+    consentToSendData: true,
+    endpoint: "http://localhost:1234/v1",
+    apiKey: "",
+    model: "qwen2.5-coder",
+    format: "openai",
+  });
+
+  assert.equal(result.ok, true);
+});

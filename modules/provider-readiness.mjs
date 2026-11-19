@@ -28,11 +28,12 @@ const getMissingRequiredFields = (settings) => {
     case "gemini":
       return missingStringFields({ apiKey: settings.apiKey, model: settings.model });
     case "custom":
+      // No key required: the Custom engine exists largely for self-hosted
+      // servers (LM Studio, llama.cpp, vLLM) that run without one.
       return missingStringFields({
         endpoint: settings.endpoint,
         model: settings.model,
         format: settings.format,
-        ...(settings.format === "openai" ? { apiKey: settings.apiKey } : {}),
       });
     default:
       return ["provider"];

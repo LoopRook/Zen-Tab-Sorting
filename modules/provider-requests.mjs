@@ -163,7 +163,9 @@ const openAiRequest = (endpoint, apiKey, model, prompt, maxTokens, paramStyle, r
   url: appendPath(endpoint, "/chat/completions"),
   init: {
     method: "POST",
-    headers: { "content-type": "application/json", [AUTH_HEADER_NAME]: `Bearer ${apiKey}` },
+    // A blank key sends no header at all; "Bearer " with nothing after it is
+    // rejected as malformed by some servers that need no key.
+    headers: { "content-type": "application/json", ...(apiKey ? { [AUTH_HEADER_NAME]: `Bearer ${apiKey}` } : {}) },
     body: JSON.stringify({
       model,
       messages: [{ role: "user", content: prompt }],

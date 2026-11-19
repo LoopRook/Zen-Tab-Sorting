@@ -204,3 +204,14 @@ test("Given a reasoning model that spent its budget thinking When describing the
   assert.match(detail, /reasoning_tokens=64/);
   assert.equal(describeEmptyResponse("ollama", body), "");
 });
+
+test("Given a blank key When building an OpenAI-format request Then no auth header is sent", () => {
+  const request = buildProviderRequest({
+    provider: "custom",
+    endpoint: "http://localhost:1234/v1",
+    apiKey: "",
+    model: "qwen2.5-coder",
+    format: "openai",
+  }, "sort tabs", 800);
+  assert.equal("authorization" in request.init.headers, false);
+});
