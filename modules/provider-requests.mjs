@@ -72,6 +72,82 @@ export const describeEmptyResponse = (kind, text) => {
   return parts.join(", ");
 };
 
+// A 200 is not always an answer. Returns a reason string when the response
+// must not be used, or "" when it looks like a normal answer:
+//   - gateways (OpenRouter among them) report API errors inside a 200
+//   - a cut-off answer (finish_reason "length", Gemini MAX_TOKENS, Ollama
+//     done_reason "length") can still parse as JSON yet be missing tabs, so it
+//     is rejected and the caller's smaller-batch retry takes over
+//   - a refusal or content filter is not an answer either
+// (Adapted from upstream OpenTabSort-Zen 68977f7 / d1a0022.)
+export const describeUnusableResponse = (kind, text) => {
+  const parsed = parseJson(text);
+  if (!parsed || typeof parsed !== "object") return "";
+  if (parsed.error) {
+    const message = typeof parsed.error === "string" ? parsed.error : parsed.error.message || parsed.error.code || "";
+    return `Provider reported an error${message ? `: ${String(message).slice(0, 160)}` : ""}`;
+  }
+  const finish = parsed.choices?.[0]?.finish_reason ?? parsed.candidates?.[0]?.finishReason ?? parsed.done_reason;
+  if (finish === "content_filter" || finish === "SAFETY" || parsed.choices?.[0]?.message?.refusal) {
+    return "Provider blocked the response";
+  }
+  if (finish === "length" || finish === "MAX_TOKENS") {
+    const detail = describeEmptyResponse(kind, text);
+    return `Provider response hit its output limit${detail ? ` (${detail})` : ""}`;
+  }
+  return "";
+};
+
+// Pull the JSON object out of a model's answer. Models asked for JSON still
+// wrap it: a leading <think>…</think> block, a ```json fence, or a sentence
+// before or after. Accept exactly one complete object; two candidates are
+// ambiguous and a truncated one is not an answer, so both throw.
+// (Adapted from upstream OpenTabSort-Zen d1a0022.)
+export const parseAnswerObject = (text) => {
+  let raw = String(text || "").trim().replace(/^(?:\s*<(think|thinking|analysis)>[\s\S]*?<\/\1>)+\s*/i, "");
+  const fenced = raw.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  if (fenced) raw = fenced[1].trim();
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    const candidates = [];
+    let start = -1;
+    let depth = 0;
+    let quoted = false;
+    let escaped = false;
+    for (let i = 0; i < raw.length; i++) {
+      const ch = raw[i];
+      if (depth === 0) {
+        if (ch === "{") {
+          start = i;
+          depth = 1;
+        }
+        continue;
+      }
+      if (quoted) {
+        if (escaped) escaped = false;
+        else if (ch === "\\") escaped = true;
+        else if (ch === '"') quoted = false;
+      } else if (ch === '"') quoted = true;
+      else if (ch === "{") depth++;
+      else if (ch === "}" && --depth === 0) {
+        try { candidates.push(JSON.parse(raw.slice(start, i + 1))); } catch {}
+      }
+    }
+    if (candidates.length !== 1 || depth !== 0) {
+      throw new Error(candidates.length > 1
+        ? "Provider returned more than one JSON answer"
+        : `Provider returned non-JSON content: ${raw.slice(0, 120)}`);
+    }
+    [parsed] = candidates;
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("Provider returned non-object JSON");
+  }
+  return parsed;
+};
+
 export const getProviderKind = (provider) => (provider.provider === "custom" ? provider.format : provider.provider);
 
 export const parseProviderResponse = (kind, text) => {

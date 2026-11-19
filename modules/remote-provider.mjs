@@ -8,7 +8,9 @@ import { getProviderReadiness } from "./provider-readiness.mjs";
 import {
   buildProviderRequest,
   describeEmptyResponse,
+  describeUnusableResponse,
   getProviderKind,
+  parseAnswerObject,
   guessParamStyle,
   isParamStyleError,
   otherParamStyle,
@@ -285,26 +287,9 @@ const clusterUnmatchedNewGroups = async (leftover, settings) => {
   };
 };
 
-const providerJson = async (settings, prompt, maxTokens = PROVIDER_JSON_MAX_TOKENS) => {
-  const responseText = await providerText(settings, prompt, maxTokens);
-  let parsed;
-  try {
-    parsed = JSON.parse(extractJsonObjectText(responseText));
-  } catch {
-    throw new Error(`Provider returned non-JSON content: ${String(responseText).slice(0, 120)}`);
-  }
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new Error("Provider returned non-object JSON");
-  }
-  return parsed;
-};
+const providerJson = async (settings, prompt, maxTokens = PROVIDER_JSON_MAX_TOKENS) =>
+  parseAnswerObject(await providerText(settings, prompt, maxTokens));
 
-const extractJsonObjectText = (text) => {
-  const raw = String(text || "").trim();
-  const fenced = raw.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
-  if (fenced) return fenced[1].trim();
-  return raw;
-};
 
 // Resolve which fetch to use. In the about:preferences context (where the
 // "Test connection" button lives) the document's CSP can block fetches to
@@ -403,6 +388,8 @@ const providerTextDetailed = async (settings, prompt, maxTokens) => {
 
   if (!response.ok) throw new Error(`HTTP ${response.status}: ${body.slice(0, 200)}`);
   if (adaptive) acceptedByTarget.set(target, { style, effort });
+  const unusable = describeUnusableResponse(kind, body);
+  if (unusable) throw new Error(unusable);
   const text = parseProviderResponse(kind, body);
   if (typeof text !== "string" || !text.trim()) {
     const detail = describeEmptyResponse(kind, body);
