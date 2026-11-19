@@ -83,14 +83,26 @@ test("Given an effort When describing it for the connection test Then it reads n
 });
 
 test("Given time limit text When normalizing Then blanks default, zero disables and values are clamped", () => {
-  assert.equal(normalizeTimeLimitSeconds(""), 30);
+  assert.equal(normalizeTimeLimitSeconds(""), 60);
   assert.equal(normalizeTimeLimitSeconds("0"), 0);
   assert.equal(normalizeTimeLimitSeconds("12"), 12);
   assert.equal(normalizeTimeLimitSeconds("12s"), 12);
   assert.equal(normalizeTimeLimitSeconds("2,5"), 5);
   assert.equal(normalizeTimeLimitSeconds("9999"), 300);
-  assert.equal(normalizeTimeLimitSeconds("soon"), 30);
-  assert.equal(normalizeTimeLimitSeconds(-4), 30);
+  assert.equal(normalizeTimeLimitSeconds("soon"), 60);
+  assert.equal(normalizeTimeLimitSeconds(-4), 60);
   assert.equal(deadlineFromSeconds(0, 1000), null);
   assert.equal(deadlineFromSeconds(10, 1000), 11000);
+});
+
+test("Given a server that does not know the field When fast is refused Then the field is dropped at once", () => {
+  for (const message of [
+    "Unrecognized request argument supplied: reasoning_effort",
+    "Unsupported parameter: 'reasoning_effort' is not supported with this model.",
+    "Extra inputs are not permitted",
+  ]) {
+    assert.equal(nextReasoningEffort("fast", JSON.stringify({ error: { message } }), new Set(["none"])), null, message);
+  }
+  // A value-level complaint still walks to the next value.
+  assert.equal(nextReasoningEffort("fast", "Unsupported value: 'reasoning_effort' does not support 'none'", new Set(["none"])), "low");
 });

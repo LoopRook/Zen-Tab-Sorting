@@ -35,6 +35,7 @@ import { fetchPageSnippets } from "./tabs.mjs";
 import { showToast } from "./ui-toast.mjs";
 
 const GENERATE_TIMEOUT_MS = 120000;
+const CONNECTION_TEST_MAX_TOKENS = 256;
 const PROVIDER_JSON_MAX_TOKENS = 4096;
 const PROVIDER_FRESH_JSON_MAX_TOKENS = 4096;
 const PROVIDER_FRESH_TAB_BATCH_SIZE = 35;
@@ -75,7 +76,10 @@ export const testProviderConnection = async (settings = readProviderSettings(Ser
   }
   const t0 = Date.now();
   try {
-    const result = await providerTextDetailed(readiness.value, "Reply with the single word: ok", 16);
+    // 256, not 16: a thinking model that ignores reasoning_effort and writes
+    // <think> into its content would otherwise hit the limit and fail a test
+    // its real sorts (4096 tokens) pass.
+    const result = await providerTextDetailed(readiness.value, "Reply with the single word: ok", CONNECTION_TEST_MAX_TOKENS);
     return {
       ok: true,
       reply: result.text.slice(0, 60),
@@ -137,14 +141,15 @@ export const runPass2Remote = async (unmatched, rules, settings = readProviderSe
       return { ...empty, skipped: unmatched, failed: readiness.reason };
     }
 
-    const active = withDeadline(readiness.value);
     if (!rules.some((r) => r?.name)) {
-      const grouped = await clusterUnmatchedNewGroups(unmatched, active);
+      const grouped = await clusterUnmatchedNewGroups(unmatched, withDeadline(readiness.value));
       return { assignedToExisting: [], newGroups: grouped.groups, skipped: grouped.skipped };
     }
 
     const { deduped, origToDeduped } = dedupeTabs(unmatched);
     const snippets = await fetchSnippets(deduped, "remote");
+    // The time limit is for the model, so it starts after snippets are in.
+    const active = withDeadline(readiness.value);
     const ruleNameByLower = new Map(rules.filter((r) => r?.name).map((r) => [r.name.toLowerCase(), r.name]));
     const { parsedByIndex: parsedByDedupedIndex, failures } = await collectProviderTabMap({
       tabs: deduped,
@@ -201,9 +206,9 @@ export const runPass2RemoteFresh = async (allTabs, settings = readProviderSettin
       return { ...empty, skipped: allTabs, failed: readiness.reason };
     }
 
-    const active = withDeadline(readiness.value);
     const { deduped, origToDeduped } = dedupeTabs(allTabs);
     const snippets = await fetchSnippets(deduped, "remote fresh");
+    const active = withDeadline(readiness.value);
     const { parsedByIndex: parsedByDedupedIndex, failures } = await collectProviderTabMap({
       tabs: deduped,
       snippets,

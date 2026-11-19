@@ -112,7 +112,7 @@ export const CONFIG = {
   // Wall-clock limit for one remote AI pass, in seconds. 0 = no limit. Tabs
   // the provider has not placed by then stay where they are.
   AI_TIME_LIMIT_PREF: "extensions.zen-auto-organize.ai-time-limit",
-  AI_TIME_LIMIT_DEFAULT: 30,
+  AI_TIME_LIMIT_DEFAULT: 60,
   AI_TIME_LIMIT_MIN: 5,
   AI_TIME_LIMIT_MAX: 300,
   // One-shot flags: set true after the user dismisses the first-time AI

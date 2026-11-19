@@ -197,7 +197,7 @@ test("Given a GPT-5 model name When testing the connection Then the first reques
 
       assert.equal(result.ok, true);
       assert.equal(calls.length, 1);
-      assert.equal(calls[0].body.max_completion_tokens, 4112);
+      assert.equal(calls[0].body.max_completion_tokens, 4352);
       assert.equal("max_tokens" in calls[0].body, false);
     },
   );
@@ -220,9 +220,9 @@ test("Given a server that rejects max_tokens When a request is sent Then it retr
       const first = await testProviderConnection(settings);
       assert.equal(first.ok, true);
       assert.equal(calls.length, 2);
-      assert.equal(calls[0].body.max_tokens, 64);
+      assert.equal(calls[0].body.max_tokens, 256);
       assert.equal(calls[0].body.temperature, 0.2);
-      assert.equal(calls[1].body.max_completion_tokens, 4112);
+      assert.equal(calls[1].body.max_completion_tokens, 4352);
       assert.equal("temperature" in calls[1].body, false);
 
       // The detected shape is cached, so the second call does not pay for the
@@ -230,7 +230,7 @@ test("Given a server that rejects max_tokens When a request is sent Then it retr
       const second = await testProviderConnection(settings);
       assert.equal(second.ok, true);
       assert.equal(calls.length, 3);
-      assert.equal(calls[2].body.max_completion_tokens, 4112);
+      assert.equal(calls[2].body.max_completion_tokens, 4352);
     },
   );
 });
@@ -330,7 +330,7 @@ test("Given a server that does not know reasoning_effort When a request is sent 
       assert.equal(calls[0].body.reasoning_effort, "medium");
       assert.equal("reasoning_effort" in calls[1].body, false);
       // Classic shape kept throughout: the shape was never the problem.
-      assert.equal(calls[1].body.max_tokens, 64);
+      assert.equal(calls[1].body.max_tokens, 256);
 
       await testProviderConnection(settings);
       assert.equal(calls.length, 3);
@@ -350,7 +350,7 @@ test("Given a rejected shape and a rejected reasoning value When a request is se
       const result = await testProviderConnection(remoteSettings("https://both.example.test/v1"));
       assert.equal(result.ok, true);
       assert.equal(calls.length, 3);
-      assert.equal(calls[2].body.max_completion_tokens, 4112);
+      assert.equal(calls[2].body.max_completion_tokens, 4352);
       assert.equal(calls[2].body.reasoning_effort, "low");
     },
   );

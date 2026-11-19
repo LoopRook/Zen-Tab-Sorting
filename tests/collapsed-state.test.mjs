@@ -78,3 +78,15 @@ test("Given more entries than the cap When serializing Then the oldest are dropp
   assert.equal(parsed.length, MAX_COLLAPSED_ENTRIES);
   assert.equal(parsed[0].id, "g5");
 });
+
+test("Given an id-less group under a legacy label When it is expanded Then it stays expanded after a round trip", () => {
+  const entries = [{ id: null, label: "Research", collapsed: true }, { id: null, label: "Research", collapsed: true }];
+  const next = updateCollapsedEntries(entries, { id: "", label: "Research" }, false);
+  const reread = parseCollapsedEntries(serializeCollapsedEntries(next));
+  assert.equal(isSavedCollapsed(reread, { id: "", label: "Research" }), false);
+});
+
+test("Given a collapsed group When it is expanded and nothing else applies Then its entry is removed", () => {
+  const entries = [{ id: "a", label: "Dev", collapsed: true }];
+  assert.deepEqual(updateCollapsedEntries(entries, { id: "a", label: "Dev" }, false), []);
+});

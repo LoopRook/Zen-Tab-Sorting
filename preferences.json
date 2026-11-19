@@ -239,9 +239,9 @@
   },
   {
     "type": "string",
-    "label": "AI time limit in seconds for remote providers (0 = no limit). Tabs not placed in time stay where they are",
+    "label": "AI time limit in seconds for remote providers (0 = no limit; raise it for slow local servers). Tabs not placed in time stay where they are",
     "property": "extensions.zen-auto-organize.ai-time-limit",
-    "defaultValue": "30",
-    "placeholder": "30"
+    "defaultValue": "60",
+    "placeholder": "60"
   }
 ]

@@ -68,12 +68,21 @@ export const parseSupportedEfforts = (body) => {
   return [...new Set(found.map((v) => v.toLowerCase()))];
 };
 
+// The provider does not know the field at all (as opposed to disliking one
+// value): "Unrecognized request argument supplied: reasoning_effort",
+// "Unsupported parameter: 'reasoning_effort'", pydantic "extra inputs are not
+// permitted". No value will help, so the field should be dropped at once.
+export const isReasoningFieldUnknown = (body) =>
+  /unrecognized request argument|unsupported parameter|unknown (?:parameter|field|argument)|unexpected (?:keyword|field|parameter|argument)|extra (?:inputs?|fields?)|extra_forbidden|not permitted/i
+    .test(String(body || ""));
+
 // The next value to try after `current` was rejected, or null to drop the
 // field entirely. `tried` holds every value already sent (null included).
 export const nextReasoningEffort = (preference, body, tried = new Set()) => {
   const pref = normalizeReasoningPreference(preference);
   if (pref === REASONING_DEFAULT) return null;
   const supported = parseSupportedEfforts(body);
+  if (!supported.length && isReasoningFieldUnknown(body)) return null;
   const untried = (list) => list.find((v) => !tried.has(v)) ?? null;
 
   if (pref === REASONING_FAST) {

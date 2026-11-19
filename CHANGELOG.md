@@ -12,7 +12,7 @@ A test build from the `dev` branch. Install it in Sine as
   Default **Fast** asks for reasoning off and falls back to the cheapest level
   the model accepts, read from the provider's own rejection. Low, Medium, High
   and Provider default are also available.
-- **AI time limit** for remote engines (30s default, 0 = none). Batches already
+- **AI time limit** for remote engines (60s default, 0 = none). Batches already
   answered are kept; the rest stay put, with a toast.
 - The **Test connection** result shows the round-trip time and reasoning level.
 

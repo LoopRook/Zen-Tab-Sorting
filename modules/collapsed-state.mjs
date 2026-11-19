@@ -14,7 +14,7 @@
 // Pure functions; the pref I/O lives in rules.mjs and browser-hooks.mjs.
 
 // Ids of closed groups are never reported to us, so cap the list (oldest go).
-export const MAX_COLLAPSED_ENTRIES = 200;
+export const MAX_COLLAPSED_ENTRIES = 500;
 
 export const parseCollapsedEntries = (raw) => {
   let parsed;
@@ -39,12 +39,15 @@ export const parseCollapsedEntries = (raw) => {
   return out;
 };
 
+// A bare string means "collapsed by label" (the old format), so anything else
+// (an id entry, or a label entry recorded as expanded) is written as an object.
 export const serializeCollapsedEntries = (entries) =>
   JSON.stringify(entries.slice(-MAX_COLLAPSED_ENTRIES).map((e) =>
-    (e.id ? { id: e.id, label: e.label, collapsed: e.collapsed } : e.label)));
+    (e.id || e.collapsed === false ? { id: e.id || null, label: e.label, collapsed: e.collapsed } : e.label)));
 
-const ownEntry = (entries, { id, label }) =>
-  id ? entries.find((e) => e.id === id) : entries.find((e) => !e.id && e.label === label);
+// The entries that belong to a group: its id entry, or, for a group with no
+// id, every label entry with its name (all of them describe it).
+const belongsTo = ({ id, label }) => (e) => (id ? e.id === id : !e.id && e.label === label);
 
 // Should this group come back collapsed? Its own id entry decides when there
 // is one; otherwise a label-only entry with the same name does.
@@ -60,12 +63,14 @@ export const isSavedCollapsed = (entries, { id, label }) => {
 // that name that have not been migrated yet.
 export const updateCollapsedEntries = (entries, group, collapsed) => {
   if (!group?.id && !group?.label) return null;
-  const own = ownEntry(entries, group);
-  if (own && own.collapsed === collapsed) return null;
-  // No entry yet and expanded: only worth recording when a label-only entry
-  // would otherwise collapse this group on the next restore.
-  if (!own && !collapsed && !isSavedCollapsed(entries, group)) return null;
-  const next = entries.filter((e) => e !== own);
+  const mine = belongsTo(group);
+  const own = entries.filter(mine);
+  if (own.length === 1 && own[0].collapsed === collapsed) return null;
+  const next = entries.filter((e) => !mine(e));
+  // Expanded is the default after a restore, so an expanded group needs an
+  // entry only when a label entry would otherwise collapse it. Otherwise the
+  // entry is simply dropped, which keeps the list down to collapsed groups.
+  if (!collapsed && !isSavedCollapsed(next, group)) return own.length ? next : null;
   next.push({ id: group.id || null, label: group.label || "", collapsed });
   return next;
 };
