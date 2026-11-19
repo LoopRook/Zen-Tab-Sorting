@@ -43,6 +43,15 @@ export const getHostname = (url) => {
 
 const SNIPPET_MAX_CHARS = 400;
 const SNIPPET_FETCH_TIMEOUT_MS = 3000;
+// Snippets come from <head> meta tags, so the first 256 KiB of a page is
+// plenty; reading a whole multi-megabyte page for them was wasted work.
+const SNIPPET_MAX_BYTES = 256 * 1024;
+// A sort used to fire one fetch per tab at once, each carrying the user's
+// cookies: 300 tabs meant 300 simultaneous requests. Cap the parallelism and
+// the total time; tabs not reached in time just sort by title.
+// (Bounds adapted from upstream OpenTabSort-Zen abcd2f6.)
+const SNIPPET_CONCURRENCY = 6;
+const SNIPPET_TOTAL_BUDGET_MS = 6000;
 
 // Minimal HTML entity decoder — covers the entities that appear in meta tags.
 const decodeHtmlEntities = (s) => s
@@ -106,12 +115,13 @@ const extractSnippetFromHtml = (html) => {
 
 // Returns "" on any failure (404, timeout, network error, non-HTML response,
 // no usable meta tag). Caller treats empty as "no snippet, fall back to title".
-export const fetchPageSnippet = async (url) => {
+export const fetchPageSnippet = async (url, timeoutMs = SNIPPET_FETCH_TIMEOUT_MS) => {
   if (!url) return "";
   if (!url.startsWith("http://") && !url.startsWith("https://")) return "";
+  if (!(timeoutMs > 0)) return "";
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), SNIPPET_FETCH_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await fetch(url, {
       signal: controller.signal,
@@ -121,13 +131,58 @@ export const fetchPageSnippet = async (url) => {
     if (!res.ok) return "";
     const ct = (res.headers.get("content-type") || "").toLowerCase();
     if (!ct.includes("html")) return "";
-    const html = await res.text();
+    const html = await readCappedText(res, SNIPPET_MAX_BYTES);
     return extractSnippetFromHtml(html);
   } catch {
     return "";
   } finally {
     clearTimeout(timer);
   }
+};
+
+// Read at most `maxBytes` of a response body, then cancel the rest.
+const readCappedText = async (res, maxBytes) => {
+  const reader = res.body?.getReader?.();
+  if (!reader) return (await res.text()).slice(0, maxBytes);
+  const decoder = new TextDecoder();
+  let text = "";
+  let bytes = 0;
+  try {
+    while (bytes < maxBytes) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      bytes += value.byteLength;
+      text += decoder.decode(value, { stream: true });
+    }
+  } finally {
+    try { await reader.cancel(); } catch {}
+  }
+  return text;
+};
+
+// Snippets for a list of URLs, in order. Non-http(s) URLs get "" without a
+// request (about:, file:, data: and friends have no page to read, and a
+// synthetic https://hostname/ would fetch someone else's homepage).
+export const fetchPageSnippets = async (urls, {
+  concurrency = SNIPPET_CONCURRENCY,
+  budgetMs = SNIPPET_TOTAL_BUDGET_MS,
+  fetchOne = fetchPageSnippet,
+} = {}) => {
+  const results = new Array(urls.length).fill("");
+  const deadline = Date.now() + budgetMs;
+  let next = 0;
+  const worker = async () => {
+    while (next < urls.length) {
+      const i = next++;
+      const url = String(urls[i] || "");
+      if (!url.startsWith("http://") && !url.startsWith("https://")) continue;
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) return;
+      results[i] = await fetchOne(url, Math.min(SNIPPET_FETCH_TIMEOUT_MS, remaining));
+    }
+  };
+  await Promise.all(Array.from({ length: Math.max(1, Math.min(concurrency, urls.length)) }, worker));
+  return results;
 };
 
 /**

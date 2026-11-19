@@ -27,7 +27,7 @@ import {
   getAINewGroupBehavior,
   getLocalAIBatchSize,
 } from "./rules.mjs";
-import { getTabTitle, fetchPageSnippet } from "./tabs.mjs";
+import { getTabTitle, fetchPageSnippets } from "./tabs.mjs";
 import { findExistingGroup, expandIfCollapsed, applyGroupColor, findSafeInsertAnchor } from "./groups.mjs";
 import { showToast } from "./ui-toast.mjs";
 
@@ -622,17 +622,10 @@ export const runPass2Fresh = async (tabs) => {
   // bare title. This is the same enriched signal block we feed to Ollama, and
   // it produces noticeably better clusters on Local since the embedder gets
   // semantic content beyond just the homepage-style title pattern.
-  // Bounded parallel: fetchPageSnippet has its own 3s timeout per request; we
-  // fire them all in parallel and let the slow ones drop to "" silently.
+  // Bounded: a few fetches at a time within an overall budget (see
+  // fetchPageSnippets); slow or failed pages drop to "" silently.
   const snippetT0 = performance.now();
-  const snippets = await Promise.all(reps.map((t) => {
-    const url = t.url || "";
-    // Only fetch the tab's actual http(s) URL. Non-http(s) tabs (about:*, chrome://, file://,
-    // javascript:, data:, blob:) have no real-world snippet — falling back to a synthetic
-    // https://hostname/ URL would fetch the wrong page (someone else's homepage).
-    if (!url.startsWith("http://") && !url.startsWith("https://")) return "";
-    return fetchPageSnippet(url);
-  }));
+  const snippets = await fetchPageSnippets(reps.map((t) => t.url || ""));
   const hitCount = snippets.filter((s) => s).length;
   console.log(
     `${LOG} Local Fresh: fetched page snippets for ${hitCount}/${reps.length} tab(s) in ${Math.round(performance.now() - snippetT0)}ms`

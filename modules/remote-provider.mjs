@@ -31,7 +31,7 @@ import { buildClassifyPrompt, buildClusterPrompt, buildUnifiedPrompt, buildFresh
 import { consolidateNewGroups } from "./new-group-consolidation.mjs";
 import { chunkTabsForProvider, PROVIDER_TAB_BATCH_SIZE } from "./provider-batching.mjs";
 import { collectProviderTabMap } from "./remote-assignment-retry.mjs";
-import { fetchPageSnippet } from "./tabs.mjs";
+import { fetchPageSnippets } from "./tabs.mjs";
 import { showToast } from "./ui-toast.mjs";
 
 const GENERATE_TIMEOUT_MS = 120000;
@@ -417,11 +417,7 @@ const dedupeTabs = (tabs) => {
 
 const fetchSnippets = async (tabs, label) => {
   const t0 = performance.now();
-  const snippets = await Promise.all(tabs.map((tab) => {
-    const url = tab.url || "";
-    if (!url.startsWith("http://") && !url.startsWith("https://")) return "";
-    return fetchPageSnippet(url);
-  }));
+  const snippets = await fetchPageSnippets(tabs.map((tab) => tab.url || ""));
   const hit = snippets.filter(Boolean).length;
   console.log(`${LOG} ${label}: fetched snippets for ${hit}/${tabs.length} tab(s) in ${Math.round(performance.now() - t0)}ms`);
   return snippets;

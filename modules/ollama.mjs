@@ -15,7 +15,7 @@
 
 import { LOG } from "./config.mjs";
 import { getOllamaHost, getOllamaModel } from "./rules.mjs";
-import { fetchPageSnippet } from "./tabs.mjs";
+import { fetchPageSnippets } from "./tabs.mjs";
 import { showToast } from "./ui-toast.mjs";
 import { chunkTabsForProvider } from "./provider-batching.mjs";
 import { ollamaGenerateJson } from "./ollama-transport.mjs";
@@ -171,15 +171,11 @@ export const unifiedClassifyOllama = async (unmatched, rules, host, model) => {
     console.log(`${LOG} Ollama: deduplicated ${unmatched.length} tabs → ${deduped.length} unique`);
   }
 
-  // Fetch page snippets in parallel. Each is bounded by its own 3s timeout,
-  // and any failure (auth, timeout, non-HTML, no meta tag) returns "" so the
+  // Fetch page snippets, a few at a time within an overall budget, and any
+  // failure (auth, timeout, non-HTML, no meta tag) returns "" so the
   // tab just falls back to title-only context — never blocks classification.
   const t0 = performance.now();
-  const snippets = await Promise.all(deduped.map((t) => {
-    const url = t.url || "";
-    if (!url.startsWith("http://") && !url.startsWith("https://")) return "";
-    return fetchPageSnippet(url);
-  }));
+  const snippets = await fetchPageSnippets(deduped.map((t) => t.url || ""));
   const hit = snippets.filter((s) => s).length;
   console.log(`${LOG} Ollama: fetched page snippets for ${hit}/${deduped.length} tab(s) in ${Math.round(performance.now() - t0)}ms`);
   console.groupCollapsed(`${LOG} Ollama snippet detail (collapse)`);
@@ -438,11 +434,7 @@ export const runPass2OllamaFresh = async (allTabs) => {
     }
 
     const t0 = performance.now();
-    const snippets = await Promise.all(deduped.map((t) => {
-      const url = t.url || "";
-      if (!url.startsWith("http://") && !url.startsWith("https://")) return "";
-      return fetchPageSnippet(url);
-    }));
+    const snippets = await fetchPageSnippets(deduped.map((t) => t.url || ""));
     const hit = snippets.filter((s) => s).length;
     console.log(`${LOG} Ollama fresh: fetched snippets for ${hit}/${deduped.length} tab(s) in ${Math.round(performance.now() - t0)}ms`);
 
