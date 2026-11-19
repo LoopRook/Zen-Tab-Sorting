@@ -543,11 +543,11 @@ const onOurDialogFound = (dialog) => {
   // so we don't restyle SuperPins or any other mod's section headers.
   dialog.classList.add("zao-our-dialog");
 
-  if (dialog.querySelector(".zao-rules-editor")) {
-    const editor = dialog.querySelector(".zao-rules-editor");
-    editor?._zaoRefresh?.("dialog reopened");
-    return;
-  }
+  // Already injected: nothing to do. Refreshing here (as this used to) ran on
+  // every DOM change inside the dialog, and a refresh that rewrites rows is
+  // itself a DOM change. Reopen refreshes go through the [open] watcher below.
+  // (Upstream OpenTabSort-Zen 4a511d4 hit this as a full refresh loop.)
+  if (dialog.querySelector(".zao-rules-editor")) return;
 
   if (!dialog._zaoOpenWatcher) {
     const watcher = new MutationObserver(() => {
