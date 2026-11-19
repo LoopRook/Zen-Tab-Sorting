@@ -18,7 +18,7 @@ That route needs one setting turned on first, because Sine only runs a mod's Jav
 
 Don't run this alongside Zen Tab Wand or OpenTabSort Zen. All three share the same toolbar button, command, and preference keys, so two of them installed at once will fight over the same DOM.
 
-After installing, a wand button appears in the workspace separator. Left-click sorts the current workspace. Right-click any tab to add its hostname to a rule or to the skip list.
+After installing, a wand button appears in the workspace separator. Left-click sorts the current workspace. While an AI pass runs, a percentage beside the wand shows how many tabs have an answer so far; click the wand again to stop, which keeps what is already answered and leaves the rest where it was. Right-click any tab to add its hostname to a rule or to the skip list.
 
 ## How sorting works
 
@@ -46,6 +46,8 @@ The three remote engines send tab titles, URLs and optional page snippets to whi
 There's a Test connection button under Remote Provider Settings. It runs one small request through the same checks a real sort uses and reports back what happened, so a wrong key or model shows you the actual error instead of a sort that quietly does nothing.
 
 The OpenAI-compatible engine covers both OpenAI itself and anything that speaks the same API, local servers like Ollama's OpenAI shim and LM Studio included. Type the model id the service lists, say `gpt-5.6-luna` or `gpt-4o-mini` against `https://api.openai.com/v1`, or whatever name your local server reports. You do not have to care which generation it is. Newer OpenAI models changed the request parameters and reject the ones older models require, so the mod sends one shape, reads the rejection if it comes back, retries with the other, and remembers which one that endpoint and model wanted.
+
+Reasoning models think before they answer, which sorting doesn't need. The Reasoning effort setting defaults to Fast: it asks for reasoning off and, if the model can't switch it off, the cheapest level the provider says it accepts. Low, Medium, High and Provider default are there if you'd rather trade speed for care. The AI time limit (60 seconds by default, 0 for none) caps a remote pass; batches answered by then are applied and the rest stay put. A server error gets one automatic retry.
 
 Gemini model names are forgiving: `gemini-2.5-flash`, `models/gemini-2.5-flash` and `Gemini 2.5 Flash` all work, and stray whitespace around keys and endpoints is trimmed.
 

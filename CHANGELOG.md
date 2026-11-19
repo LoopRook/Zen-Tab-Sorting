@@ -1,53 +1,50 @@
 # Changelog
 
-## 1.12.0-dev.2 — 2026-11-19 (dev branch)
+## 1.12.0 — 2026-11-19
+
+Ideas from the Tarx2000/Zen-Tab-Sorting-Jev fork and bug fixes from upstream
+OpenTabSort-Zen, tested first on the `dev` branch.
 
 ### Added
-- **Progress beside the wand** while the AI sorts: the share of tabs answered
-  so far, with the exact count in the tooltip, then "merging…" while similar
-  group names are combined. It moves batch by batch; within one batch the
-  provider reports nothing, so the number holds while the wand pulses.
-
-### Fixed
-- A provider-side 5xx ("The server had an error while processing your
-  request") is retried once after a second instead of failing the batch or
-  the connection test outright.
-- Newer OpenAI model names (gpt-6.x and later, and gateway-prefixed ones like
-  `openai/gpt-5.6-luna`) get the right request format on the first try.
-
-## 1.12.0-dev.1 — 2026-11-19 (dev branch)
-
-A test build from the `dev` branch. Install it in Sine as
-`LoopRook/Zen-Tab-Sorting/tree/dev`; it replaces the stable install in place
-(same mod id) and keeps every setting and key. Reinstall
-`LoopRook/Zen-Tab-Sorting` to go back.
-
-### Added
-- **Reasoning effort** setting for OpenAI-compatible and Custom engines.
+- **Reasoning effort** setting for the OpenAI-compatible and Custom engines.
   Default **Fast** asks for reasoning off and falls back to the cheapest level
   the model accepts, read from the provider's own rejection. Low, Medium, High
   and Provider default are also available.
-- **AI time limit** for remote engines (60s default, 0 = none). Batches already
-  answered are kept; the rest stay put, with a toast.
-- The **Test connection** result shows the round-trip time and reasoning level.
+- **AI time limit** for remote engines (60s default, 0 = none), counted from
+  after page snippets are fetched. Batches already answered are kept; the rest
+  stay put, with a notification.
+- **Progress beside the wand** while the AI sorts (share of tabs answered,
+  exact count in the tooltip, then "merging…"). Remote engines and Ollama.
+- **Click the wand again to stop** a running sort. Answered batches are
+  applied; the rest of the tabs stay where they were.
+- **Test connection** reports the round-trip time and the reasoning level used.
 
 ### Fixed
 - Collapsed state is remembered per group id, so two groups with the same name
   no longer share it. Old name-based entries migrate after one restart.
-- A second wand click during a running sort no longer starts an overlapping one.
+- Only one sort runs at a time per window.
 - Switching workspace while the AI is thinking no longer drops its groups into
   the workspace you switched to.
+- A failed batch is only split into smaller ones when that can help (a
+  malformed or cut-off answer), not on timeouts, rate limits, auth errors or
+  server errors, which used to multiply one slow failure into dozens of
+  requests.
+- A provider 5xx is retried once.
+- Newer OpenAI model names (gpt-6.x, gateway-prefixed names) get the right
+  request format on the first try.
 - Local AI: embeddings are requested in the shape Firefox's engine expects, so
-  the Local engine can match tabs at all (upstream OpenTabSort-Zen 613719f).
-- Gateway errors inside an HTTP 200, cut-off answers, and refusals are reported
-  as such instead of being parsed as (partial) results; the JSON reader skips
-  `<think>` blocks and pulls one object out of surrounding prose.
-- Ollama: cut-off or non-JSON replies are treated as failures.
+  the Local engine can match tabs (upstream 613719f).
+- Gateway errors inside an HTTP 200, cut-off answers and refusals are reported
+  as such instead of being parsed as results; the JSON reader skips `<think>`
+  blocks and pulls one object out of surrounding prose (upstream 68977f7,
+  d1a0022). Ollama gets the same cut-off and non-JSON handling.
 - Page snippets are fetched six at a time, 256 KiB per page at most, within a
-  six-second budget, instead of one request per tab all at once.
-- Custom engine works with servers that need no API key.
-- Identical toasts in quick succession are shown once.
-- The settings dialog no longer refreshes the rules editor on every DOM change.
+  six-second budget, instead of one request per tab all at once (upstream
+  abcd2f6).
+- The Custom engine works with servers that need no API key.
+- Identical notifications in quick succession are shown once.
+- The settings dialog no longer refreshes the rules editor on every DOM change
+  (upstream 4a511d4).
 
 ## 1.0.2 — 2026-06-01
 
