@@ -7,10 +7,17 @@ export const collectProviderTabMap = async ({
   label,
   buildPrompt,
   fetchJson,
+  // Called with (tabs answered so far, total) before the first batch and after
+  // every batch, for the progress readout on the wand.
+  onProgress = () => {},
 }) => {
   const parsedByIndex = new Map();
   const failures = [];
   let pending = tabs.map((_, index) => index);
+  const report = () => {
+    try { onProgress(parsedByIndex.size, tabs.length); } catch {}
+  };
+  report();
 
   for (const batchSize of retryBatchSizes(initialBatchSize)) {
     if (pending.length === 0) break;
@@ -30,6 +37,7 @@ export const collectProviderTabMap = async ({
         if (batchSize === 1) failures.push(`${label} tab ${indices[0]}: ${error.message || error}`);
         else nextPending.push(...indices);
       }
+      report();
     }
     pending = nextPending;
   }

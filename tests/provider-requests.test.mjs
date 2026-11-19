@@ -215,3 +215,13 @@ test("Given a blank key When building an OpenAI-format request Then no auth head
   }, "sort tabs", 800);
   assert.equal("authorization" in request.init.headers, false);
 });
+
+test("Given newer and prefixed model names When guessing the parameter style Then they are treated as modern", () => {
+  assert.equal(guessParamStyle("gpt-6.1-terra"), PARAM_STYLE_MODERN);
+  assert.equal(guessParamStyle("openai/gpt-5.6-luna"), PARAM_STYLE_MODERN);
+  assert.equal(guessParamStyle("gpt-10"), PARAM_STYLE_MODERN);
+  assert.equal(guessParamStyle("o4-mini"), PARAM_STYLE_MODERN);
+  assert.equal(guessParamStyle("gpt-4.1"), PARAM_STYLE_CLASSIC);
+  assert.equal(guessParamStyle("olmo-2"), PARAM_STYLE_CLASSIC);
+  assert.equal(guessParamStyle("deepseek/deepseek-v4"), PARAM_STYLE_CLASSIC);
+});

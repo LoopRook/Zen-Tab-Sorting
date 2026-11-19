@@ -41,8 +41,12 @@ export const buildProviderRequest = (provider, prompt, maxTokens, paramStyle = P
 // A model name that marks itself as the newer generation, so the first request
 // can use the right shape instead of spending a round trip to learn it. A wrong
 // guess here costs nothing: the retry covers both directions.
+// Covers GPT-5 onward (gpt-5.6-luna, gpt-6.1-terra, ...) and the o-series,
+// with or without a gateway prefix such as "openai/".
 export const guessParamStyle = (model) =>
-  /^(?:gpt-5|o[134])/i.test(String(model || "").trim()) ? PARAM_STYLE_MODERN : PARAM_STYLE_CLASSIC;
+  /^(?:[\w.-]+\/)?(?:gpt-(?:[5-9]|[1-9]\d)|o[1-9](?![\w]))/i.test(String(model || "").trim())
+    ? PARAM_STYLE_MODERN
+    : PARAM_STYLE_CLASSIC;
 
 // True when a failed response is complaining about the parameter shape rather
 // than about the key, the model or the quota, so retrying with the other shape

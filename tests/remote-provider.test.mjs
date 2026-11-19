@@ -411,3 +411,28 @@ test("Given the AI time limit runs out mid-pass When sorting Then finished batch
     globalThis.fetch = originalFetch;
   }
 });
+
+test("Given a transient server error When a request is sent Then it is retried once", async () => {
+  const serverError = JSON.stringify({ error: { message: "The server had an error while processing your request. Sorry about that!", type: "server_error" } });
+  await withStubbedFetch(
+    (n) => (n === 1 ? new Response(serverError, { status: 500 }) : new Response(okBody(), { status: 200 })),
+    async (calls) => {
+      const result = await testProviderConnection(remoteSettings("https://flaky.example.test/v1"));
+      assert.equal(result.ok, true);
+      assert.equal(calls.length, 2);
+    },
+  );
+});
+
+test("Given a persistent server error When a request is sent Then it fails after one retry", async () => {
+  const serverError = JSON.stringify({ error: { message: "The server had an error", type: "server_error" } });
+  await withStubbedFetch(
+    () => new Response(serverError, { status: 500 }),
+    async (calls) => {
+      const result = await testProviderConnection(remoteSettings("https://down.example.test/v1"));
+      assert.equal(result.ok, false);
+      assert.equal(calls.length, 2);
+      assert.match(result.error, /HTTP 500/);
+    },
+  );
+});

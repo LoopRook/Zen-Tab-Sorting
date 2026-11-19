@@ -33,6 +33,9 @@ import { chunkTabsForProvider, PROVIDER_TAB_BATCH_SIZE } from "./provider-batchi
 import { collectProviderTabMap } from "./remote-assignment-retry.mjs";
 import { fetchPageSnippets } from "./tabs.mjs";
 import { showToast } from "./ui-toast.mjs";
+import { setSortPhase, setSortProgress } from "./sort-progress.mjs";
+
+const MERGE_PHASE = ["merging…", "Sorting with AI: merging similar group names"];
 
 const GENERATE_TIMEOUT_MS = 120000;
 const CONNECTION_TEST_MAX_TOKENS = 256;
@@ -158,6 +161,7 @@ export const runPass2Remote = async (unmatched, rules, settings = readProviderSe
       label: "remote provider",
       buildPrompt: (tabs, chunkSnippets) => buildUnifiedPrompt(rules, tabs, chunkSnippets),
       fetchJson: (prompt) => providerJson(active, prompt, PROVIDER_JSON_MAX_TOKENS),
+      onProgress: setSortProgress,
     });
     const assignedToExisting = [];
     const newGroupsByKey = new Map();
@@ -180,6 +184,7 @@ export const runPass2Remote = async (unmatched, rules, settings = readProviderSe
       newGroupsByKey.get(lower).tabs.push(unmatched[i]);
     }
 
+    setSortPhase(...MERGE_PHASE);
     const newGroups = await consolidateNewGroups([...newGroupsByKey.values()], (prompt) =>
       providerJson(active, prompt), "Remote provider");
     if (timeLimitHit(active) && failures.length > 0) {
@@ -216,6 +221,7 @@ export const runPass2RemoteFresh = async (allTabs, settings = readProviderSettin
       label: "remote provider fresh",
       buildPrompt: (tabs, chunkSnippets) => buildFreshPrompt(tabs, chunkSnippets),
       fetchJson: (prompt) => providerJson(active, prompt, PROVIDER_FRESH_JSON_MAX_TOKENS),
+      onProgress: setSortProgress,
     });
     const newGroupsByKey = new Map();
     const skipped = [];
@@ -238,6 +244,7 @@ export const runPass2RemoteFresh = async (allTabs, settings = readProviderSettin
       showToast(`Remote provider skipped ${failures.length} full-AI batch(es). Try a stronger model if some tabs did not move.`);
     }
 
+    setSortPhase(...MERGE_PHASE);
     const newGroups = await consolidateNewGroups([...newGroupsByKey.values()], (prompt) =>
       providerJson(active, prompt, PROVIDER_FRESH_JSON_MAX_TOKENS), "Remote provider");
 
@@ -259,6 +266,7 @@ const clusterUnmatchedNewGroups = async (leftover, settings) => {
   const groupsByLower = new Map();
 
   for (const chunk of chunkTabsForProvider(leftover)) {
+    setSortProgress(chunk.start, leftover.length);
     let parsed;
     try {
       parsed = await providerJson(settings, buildClusterPrompt(chunk.tabs));
@@ -352,6 +360,13 @@ const acceptedByTarget = new Map();
 // a provider that keeps answering with contradictory errors.
 const MAX_REQUEST_ATTEMPTS = 5;
 
+// A 5xx is the provider's own failure ("The server had an error while
+// processing your request"), usually transient. One retry after a short pause
+// recovers most of them; a second failure is reported as before.
+const SERVER_ERROR_RETRY_DELAY_MS = 1000;
+const isServerError = (status) => status >= 500 && status <= 504;
+const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 const providerTextDetailed = async (settings, prompt, maxTokens) => {
   const kind = getProviderKind(settings);
   // Only the OpenAI-shaped kinds have the parameter split and a reasoning
@@ -368,11 +383,18 @@ const providerTextDetailed = async (settings, prompt, maxTokens) => {
 
   let response;
   let body;
-  // Retry only while the provider is specifically rejecting how the request
-  // was shaped. Any other failure is the caller's problem, not ours.
+  let retriedServerError = false;
+  // Retry only while the provider is rejecting how the request was shaped, or
+  // once for a server-side error. Anything else is the caller's problem.
   for (let attempt = 0; attempt < MAX_REQUEST_ATTEMPTS; attempt++) {
     ({ response, body } = await sendProviderRequest(
       buildProviderRequest(settings, prompt, maxTokens, style, effort), settings));
+    if (!response.ok && isServerError(response.status) && !retriedServerError) {
+      retriedServerError = true;
+      console.log(`${LOG} provider returned HTTP ${response.status}; retrying once`);
+      await pause(SERVER_ERROR_RETRY_DELAY_MS);
+      continue;
+    }
     if (response.ok || !adaptive) break;
     // Checked first: a reasoning complaint also says "unsupported".
     if (effort != null && isReasoningParamError(response.status, body)) {

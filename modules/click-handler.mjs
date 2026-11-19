@@ -19,6 +19,7 @@ import { runPass2, runPass2Fresh, applyPass2 } from "./ai.mjs";
 import { checkOllamaReady, reportOllamaError, normalizeOllamaHost, runPass2Ollama, runPass2OllamaFresh, classifyExistingGroupsBatch } from "./ollama.mjs";
 import { runPass2Remote, runPass2RemoteFresh, classifyExistingGroupsRemoteBatch } from "./remote-provider.mjs";
 import { showToast } from "./ui-toast.mjs";
+import { clearSortProgress } from "./sort-progress.mjs";
 import { showPreviewModal } from "./preview-modal.mjs";
 import { isFullAIMode, resolveEffectiveSortingMode, resolvePass2ApplyOptions, resolveSortingPlan } from "./sorting-mode.mjs";
 
@@ -56,6 +57,7 @@ const setButtonThinking = (thinking) => {
     const button = getTidyButton();
     if (!button) return;
     button.classList.toggle("zao-thinking", !!thinking);
+    if (!thinking) clearSortProgress();
   } catch (e) {
     console.error(`${LOG} setButtonThinking error:`, e);
   }
@@ -95,6 +97,7 @@ export const handleOrganizeClick = async () => {
     await runOrganize();
   } finally {
     window._zaoSortRunning = false;
+    clearSortProgress();
   }
 };
 

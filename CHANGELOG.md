@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.0-dev.2 — 2026-11-19 (dev branch)
+
+### Added
+- **Progress beside the wand** while the AI sorts: the share of tabs answered
+  so far, with the exact count in the tooltip, then "merging…" while similar
+  group names are combined. It moves batch by batch; within one batch the
+  provider reports nothing, so the number holds while the wand pulses.
+
+### Fixed
+- A provider-side 5xx ("The server had an error while processing your
+  request") is retried once after a second instead of failing the batch or
+  the connection test outright.
+- Newer OpenAI model names (gpt-6.x and later, and gateway-prefixed ones like
+  `openai/gpt-5.6-luna`) get the right request format on the first try.
+
 ## 1.12.0-dev.1 — 2026-11-19 (dev branch)
 
 A test build from the `dev` branch. Install it in Sine as

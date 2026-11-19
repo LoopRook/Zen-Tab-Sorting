@@ -272,6 +272,16 @@ tab-group:not([split-view-group]) {
   transform-origin: center;
 }
 
+/* How far the AI pass has got, beside the wand (sort-progress.mjs). Moves in
+   batch-sized steps; the tooltip carries the exact tab count. */
+#tab-wand-button .zao-progress {
+  margin: 0 0 0 4px;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
+  pointer-events: none;
+}
+
 /* Inline description paragraph injected under a Sine "separator" header.
    Sine renders separator labels as bold/larger section titles, so verbose
    paragraph text in the label itself breaks the styling. We inject this as a

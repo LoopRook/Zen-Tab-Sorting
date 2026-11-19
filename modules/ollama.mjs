@@ -18,6 +18,7 @@ import { getOllamaHost, getOllamaModel } from "./rules.mjs";
 import { fetchPageSnippets } from "./tabs.mjs";
 import { showToast } from "./ui-toast.mjs";
 import { chunkTabsForProvider } from "./provider-batching.mjs";
+import { setSortProgress } from "./sort-progress.mjs";
 import { ollamaGenerateJson } from "./ollama-transport.mjs";
 import {
   buildClassifyPrompt,
@@ -187,6 +188,7 @@ export const unifiedClassifyOllama = async (unmatched, rules, host, model) => {
 
   const parsedByDedupedIndex = new Map();
   for (const chunk of chunkTabsForProvider(deduped)) {
+    setSortProgress(chunk.start, deduped.length);
     const prompt = buildUnifiedPrompt(rules, chunk.tabs, snippets.slice(chunk.start, chunk.start + chunk.tabs.length));
     const r = await ollamaGenerateJson(host, model, prompt);
     if (!r.ok) throw new Error(`Ollama unified: ${r.error}`);
@@ -440,6 +442,7 @@ export const runPass2OllamaFresh = async (allTabs) => {
 
     const parsedByDedupedIndex = new Map();
     for (const chunk of chunkTabsForProvider(deduped)) {
+      setSortProgress(chunk.start, deduped.length);
       const prompt = buildFreshPrompt(chunk.tabs, snippets.slice(chunk.start, chunk.start + chunk.tabs.length));
       const r = await ollamaGenerateJson(host, model, prompt);
       if (!r.ok) {
