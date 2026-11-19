@@ -271,3 +271,143 @@ test("Given an Ollama provider When a request is sent Then no parameter-shape re
     },
   );
 });
+
+// Reasoning effort: "fast" (the default) asks for reasoning off, corrects
+// itself from the provider's rejection, and remembers what was accepted.
+// Each test uses its own endpoint because the accepted shape is cached per
+// endpoint + model + preference for the life of the module.
+
+const remoteSettings = (endpoint, extra = {}) => ({
+  provider: "openai",
+  consentToSendData: true,
+  endpoint,
+  apiKey: "sk-test",
+  model: "house-model",
+  ...extra,
+});
+
+test("Given the default preference When a request is sent Then reasoning is switched off", async () => {
+  await withStubbedFetch(
+    () => new Response(okBody(), { status: 200 }),
+    async (calls) => {
+      const result = await testProviderConnection(remoteSettings("https://fast-default.example.test/v1"));
+      assert.equal(result.ok, true);
+      assert.equal(calls[0].body.reasoning_effort, "none");
+      assert.equal(result.reasoning, "reasoning off");
+      assert.equal(typeof result.ms, "number");
+    },
+  );
+});
+
+test("Given a model that cannot switch reasoning off When fast is requested Then the cheapest listed level is used and remembered", async () => {
+  const refusal = JSON.stringify({
+    error: { message: "Unsupported value: 'reasoning_effort' does not support 'none' with this model. Supported values are: 'minimal', 'low', 'medium', and 'high'." },
+  });
+  await withStubbedFetch(
+    (n) => (n === 1 ? new Response(refusal, { status: 400 }) : new Response(okBody(), { status: 200 })),
+    async (calls) => {
+      const settings = remoteSettings("https://no-off.example.test/v1");
+      const first = await testProviderConnection(settings);
+      assert.equal(first.ok, true);
+      assert.deepEqual(calls.map((c) => c.body.reasoning_effort), ["none", "low"]);
+      assert.equal(first.reasoning, "reasoning low");
+
+      await testProviderConnection(settings);
+      assert.equal(calls.length, 3);
+      assert.equal(calls[2].body.reasoning_effort, "low");
+    },
+  );
+});
+
+test("Given a server that does not know reasoning_effort When a request is sent Then it retries without the field and remembers", async () => {
+  const unknown = JSON.stringify({ error: { message: "Unrecognized request argument supplied: reasoning_effort" } });
+  await withStubbedFetch(
+    (n) => (n === 1 ? new Response(unknown, { status: 400 }) : new Response(okBody(), { status: 200 })),
+    async (calls) => {
+      const settings = remoteSettings("https://local-server.example.test/v1", { reasoningEffort: "medium" });
+      const first = await testProviderConnection(settings);
+      assert.equal(first.ok, true);
+      assert.equal(calls[0].body.reasoning_effort, "medium");
+      assert.equal("reasoning_effort" in calls[1].body, false);
+      // Classic shape kept throughout: the shape was never the problem.
+      assert.equal(calls[1].body.max_tokens, 64);
+
+      await testProviderConnection(settings);
+      assert.equal(calls.length, 3);
+      assert.equal("reasoning_effort" in calls[2].body, false);
+    },
+  );
+});
+
+test("Given a rejected shape and a rejected reasoning value When a request is sent Then both are corrected", async () => {
+  await withStubbedFetch(
+    (n) => (n === 1
+      ? new Response(unsupportedParamBody, { status: 400 })
+      : n === 2
+        ? new Response(JSON.stringify({ error: { message: "reasoning_effort 'none' is not supported" } }), { status: 400 })
+        : new Response(okBody(), { status: 200 })),
+    async (calls) => {
+      const result = await testProviderConnection(remoteSettings("https://both.example.test/v1"));
+      assert.equal(result.ok, true);
+      assert.equal(calls.length, 3);
+      assert.equal(calls[2].body.max_completion_tokens, 4112);
+      assert.equal(calls[2].body.reasoning_effort, "low");
+    },
+  );
+});
+
+test("Given the provider-default preference When a request is sent Then no reasoning field is sent", async () => {
+  await withStubbedFetch(
+    () => new Response(okBody(), { status: 200 }),
+    async (calls) => {
+      const result = await testProviderConnection(remoteSettings("https://provider-default.example.test/v1", { reasoningEffort: "default" }));
+      assert.equal(result.ok, true);
+      assert.equal("reasoning_effort" in calls[0].body, false);
+      assert.equal(result.reasoning, "provider's default reasoning");
+    },
+  );
+});
+
+test("Given a provider that keeps refusing When a request is sent Then the retries are bounded", async () => {
+  const refusal = JSON.stringify({ error: { message: "Invalid value for reasoning_effort" } });
+  await withStubbedFetch(
+    () => new Response(refusal, { status: 400 }),
+    async (calls) => {
+      const result = await testProviderConnection(remoteSettings("https://stubborn.example.test/v1"));
+      assert.equal(result.ok, false);
+      // none, low, minimal, then no field at all; the field-less request's
+      // rejection is not a reasoning complaint the loop can act on anymore.
+      assert.ok(calls.length <= 5);
+      assert.equal("reasoning_effort" in calls.at(-1).body, false);
+    },
+  );
+});
+
+test("Given the AI time limit runs out mid-pass When sorting Then finished batches are kept and the rest are not sent", async () => {
+  const realNow = Date.now;
+  let clock = realNow();
+  Date.now = () => clock;
+  let calls = 0;
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    calls += 1;
+    const prompt = JSON.parse(init.body).messages[0].content;
+    const tabLines = [...prompt.matchAll(/^(\d+)\. /gm)];
+    // The first batch answers, then the provider "takes" a minute.
+    clock += 60_000;
+    return new Response(JSON.stringify({
+      choices: [{ message: { content: JSON.stringify(Object.fromEntries(tabLines.map((m) => [m[1], "Reading"]))) } }],
+    }), { status: 200 });
+  };
+  try {
+    const tabs = Array.from({ length: 80 }, (_, idx) => ({ hostname: `s${idx}.example.test`, title: `T${idx}`, url: "" }));
+    const plan = await runPass2RemoteFresh(tabs, remoteSettings("https://slow.example.test/v1", { timeLimitSeconds: "10" }));
+    assert.equal(calls, 1);
+    assert.equal(plan.newGroups.length, 1);
+    assert.equal(plan.newGroups[0].tabs.length, 35);
+    assert.equal(plan.skipped.length, 45);
+  } finally {
+    Date.now = realNow;
+    globalThis.fetch = originalFetch;
+  }
+});

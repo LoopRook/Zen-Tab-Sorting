@@ -222,5 +222,26 @@
       { "label": "OpenAI-compatible chat", "value": "openai" },
       { "label": "Ollama generate", "value": "ollama" }
     ]
+  },
+  {
+    "type": "dropdown",
+    "label": "Reasoning effort (OpenAI-compatible and Custom) — Fast turns thinking off when the model allows it, which is much quicker for sorting",
+    "property": "extensions.zen-auto-organize.ai-reasoning-effort",
+    "defaultValue": "fast",
+    "placeholder": false,
+    "options": [
+      { "label": "Fast — reasoning off, or the lowest the model accepts", "value": "fast" },
+      { "label": "Low", "value": "low" },
+      { "label": "Medium", "value": "medium" },
+      { "label": "High", "value": "high" },
+      { "label": "Provider default — send no reasoning setting", "value": "default" }
+    ]
+  },
+  {
+    "type": "string",
+    "label": "AI time limit in seconds for remote providers (0 = no limit). Tabs not placed in time stay where they are",
+    "property": "extensions.zen-auto-organize.ai-time-limit",
+    "defaultValue": "30",
+    "placeholder": "30"
   }
 ]

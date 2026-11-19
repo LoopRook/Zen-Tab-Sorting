@@ -7,11 +7,10 @@ import {
   guessParamStyle,
   describeEmptyResponse,
   isParamStyleError,
-  paramStyleLadder,
+  otherParamStyle,
   parseProviderResponse,
   PARAM_STYLE_CLASSIC,
   PARAM_STYLE_MODERN,
-  PARAM_STYLE_MODERN_BARE,
 } from "../modules/provider-requests.mjs";
 
 test("Given OpenAI-compatible provider When building request Then chat completions payload and auth header are used", () => {
@@ -70,13 +69,13 @@ test("Given the modern parameter style When building an OpenAI request Then max_
     apiKey: "sk-test",
     model: "gpt-5.6-luna",
     consentToSendData: true,
-  }, "sort tabs", 800, PARAM_STYLE_MODERN);
+  }, "sort tabs", 800, PARAM_STYLE_MODERN, "none");
 
   const body = JSON.parse(request.init.body);
   // The requested budget gains reasoning headroom, because these models bill
   // their hidden reasoning against the same ceiling.
   assert.equal(body.max_completion_tokens, 800 + 4096);
-  assert.equal(body.reasoning_effort, "low");
+  assert.equal(body.reasoning_effort, "none");
   assert.equal("max_tokens" in body, false);
   assert.equal("temperature" in body, false);
 });
@@ -146,28 +145,52 @@ test("Given a large requested budget When building a modern request Then it is c
   assert.equal(JSON.parse(request.init.body).max_completion_tokens, 16384);
 });
 
-test("Given the bare modern style When building a request Then reasoning_effort is omitted", () => {
+test("Given no reasoning effort When building a request Then reasoning_effort is omitted", () => {
   const request = buildProviderRequest({
     provider: "openai",
     endpoint: "https://gateway.example.test/v1",
     apiKey: "sk-test",
     model: "gpt-5-nano",
     consentToSendData: true,
-  }, "sort tabs", 800, PARAM_STYLE_MODERN_BARE);
+  }, "sort tabs", 800, PARAM_STYLE_MODERN);
 
   const body = JSON.parse(request.init.body);
   assert.equal(body.max_completion_tokens, 800 + 4096);
   assert.equal("reasoning_effort" in body, false);
 });
 
-test("Given a model name When building the style ladder Then the likely shape is tried first", () => {
-  assert.deepEqual(paramStyleLadder("gpt-5-nano"), [PARAM_STYLE_MODERN, PARAM_STYLE_MODERN_BARE, PARAM_STYLE_CLASSIC]);
-  assert.deepEqual(paramStyleLadder("llama3.2"), [PARAM_STYLE_CLASSIC, PARAM_STYLE_MODERN, PARAM_STYLE_MODERN_BARE]);
+test("Given a reasoning effort on the classic shape When building a request Then it rides along with max_tokens", () => {
+  // OpenAI-compatible gateways serving reasoning models (DeepSeek and the
+  // like) take the classic shape but still honour reasoning_effort.
+  const request = buildProviderRequest({
+    provider: "custom",
+    endpoint: "https://gateway.example.test/v1",
+    apiKey: "sk-test",
+    model: "deepseek-v4",
+    format: "openai",
+    consentToSendData: true,
+  }, "sort tabs", 800, PARAM_STYLE_CLASSIC, "none");
+
+  const body = JSON.parse(request.init.body);
+  assert.equal(body.max_tokens, 800);
+  assert.equal(body.reasoning_effort, "none");
 });
 
-test("Given an unsupported reasoning_effort When checking the error Then the ladder keeps walking", () => {
+test("Given a reasoning effort When building a Gemini or Ollama request Then it is not sent", () => {
+  const gemini = buildProviderRequest({ provider: "gemini", apiKey: "k", model: "gemini-2.5-flash" }, "x", 800, PARAM_STYLE_CLASSIC, "none");
+  const ollama = buildProviderRequest({ provider: "ollama", endpoint: "http://localhost:11434", model: "llama3.2" }, "x", 800, PARAM_STYLE_CLASSIC, "none");
+  assert.equal(gemini.init.body.includes("reasoning_effort"), false);
+  assert.equal(ollama.init.body.includes("reasoning_effort"), false);
+});
+
+test("Given a parameter style When asking for the other one Then the two shapes alternate", () => {
+  assert.equal(otherParamStyle(PARAM_STYLE_MODERN), PARAM_STYLE_CLASSIC);
+  assert.equal(otherParamStyle(PARAM_STYLE_CLASSIC), PARAM_STYLE_MODERN);
+});
+
+test("Given an unsupported reasoning_effort When checking for a shape error Then it is left to the reasoning handler", () => {
   const body = JSON.stringify({ error: { message: "Unrecognized request argument supplied: reasoning_effort" } });
-  assert.equal(isParamStyleError(400, body), true);
+  assert.equal(isParamStyleError(400, body), false);
 });
 
 test("Given a reasoning model that spent its budget thinking When describing the response Then the cause is named", () => {

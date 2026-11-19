@@ -470,7 +470,9 @@ const buildProviderTestSection = () => {
     try {
       const result = await testProviderConnection();
       if (result.ok) {
-        status.textContent = "Connected — provider replied.";
+        const details = [Number.isFinite(result.ms) ? `in ${result.ms} ms` : "", result.reasoning || ""]
+          .filter(Boolean).join(", ");
+        status.textContent = `Connected${details ? ` ${details}` : ""} — provider replied.`;
         status.dataset.state = "ok";
       } else if (result.reason === "consent_required") {
         status.textContent = "Consent required — tick the data-sending checkbox above first.";

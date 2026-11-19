@@ -28,10 +28,17 @@ export const readProviderSettings = (prefs) => {
     };
   }
   const consentToSendData = readBool(prefs, CONFIG.AI_PROVIDER_CONSENT_PREF, false);
+  // Shared by every remote engine. Raw strings; normalized where they are used
+  // (modules/reasoning.mjs), so a typo falls back to the default.
+  const tuning = {
+    reasoningEffort: readString(prefs, CONFIG.AI_REASONING_EFFORT_PREF, CONFIG.AI_REASONING_EFFORT_DEFAULT),
+    timeLimitSeconds: readString(prefs, CONFIG.AI_TIME_LIMIT_PREF, String(CONFIG.AI_TIME_LIMIT_DEFAULT)),
+  };
   if (provider === "openai") {
     return {
       provider,
       consentToSendData,
+      ...tuning,
       endpoint: readString(prefs, CONFIG.AI_OPENAI_ENDPOINT_PREF, ""),
       apiKey: readString(prefs, CONFIG.AI_OPENAI_API_KEY_PREF, ""),
       model: readString(prefs, CONFIG.AI_OPENAI_MODEL_PREF, ""),
@@ -41,6 +48,7 @@ export const readProviderSettings = (prefs) => {
     return {
       provider,
       consentToSendData,
+      ...tuning,
       apiKey: readString(prefs, CONFIG.AI_GEMINI_API_KEY_PREF, ""),
       model: normalizeGeminiModel(readString(prefs, CONFIG.AI_GEMINI_MODEL_PREF, "")),
     };
@@ -49,6 +57,7 @@ export const readProviderSettings = (prefs) => {
     return {
       provider,
       consentToSendData,
+      ...tuning,
       endpoint: readString(prefs, CONFIG.AI_CUSTOM_ENDPOINT_PREF, ""),
       apiKey: readString(prefs, CONFIG.AI_CUSTOM_API_KEY_PREF, ""),
       model: readString(prefs, CONFIG.AI_CUSTOM_MODEL_PREF, ""),

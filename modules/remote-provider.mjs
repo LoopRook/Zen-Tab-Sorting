@@ -9,11 +9,21 @@ import {
   buildProviderRequest,
   describeEmptyResponse,
   getProviderKind,
+  guessParamStyle,
   isParamStyleError,
-  paramStyleLadder,
+  otherParamStyle,
   parseProviderResponse,
   PARAM_STYLE_CLASSIC,
 } from "./provider-requests.mjs";
+import {
+  deadlineFromSeconds,
+  describeReasoningEffort,
+  initialReasoningEffort,
+  isReasoningParamError,
+  nextReasoningEffort,
+  normalizeReasoningPreference,
+  normalizeTimeLimitSeconds,
+} from "./reasoning.mjs";
 import { readProviderSettings } from "./provider-settings.mjs";
 import { buildClassifyPrompt, buildClusterPrompt, buildUnifiedPrompt, buildFreshPrompt } from "./ollama-prompts.mjs";
 import { consolidateNewGroups } from "./new-group-consolidation.mjs";
@@ -26,6 +36,27 @@ const GENERATE_TIMEOUT_MS = 120000;
 const PROVIDER_JSON_MAX_TOKENS = 4096;
 const PROVIDER_FRESH_JSON_MAX_TOKENS = 4096;
 const PROVIDER_FRESH_TAB_BATCH_SIZE = 35;
+
+// Thrown instead of sending a request once the pass's time limit is spent.
+// The batch retry loop treats it like any other batch failure, so tabs the
+// provider already placed are kept and the rest stay where they were.
+export class AiTimeLimitError extends Error {
+  constructor(seconds) {
+    super(`AI time limit reached${seconds ? ` (${seconds}s)` : ""}`);
+    this.name = "AiTimeLimitError";
+  }
+}
+
+// Attach one pass's deadline to the settings every request in it receives.
+const withDeadline = (settings) => {
+  const seconds = normalizeTimeLimitSeconds(settings.timeLimitSeconds);
+  return { ...settings, timeLimitSeconds: seconds, deadline: deadlineFromSeconds(seconds) };
+};
+
+const timeLimitHit = (settings) => settings.deadline != null && Date.now() >= settings.deadline;
+
+const timeLimitToast = (settings, leftCount) =>
+  showToast(`AI time limit (${settings.timeLimitSeconds}s) reached — ${leftCount} tab(s) left where they were. Raise the limit in settings if your provider is slow.`);
 
 const stripMetaPrefix = (s) => s
   .replace(/^\s*(?:new\s+)?(?:category|label|topic|bucket|group)\s*[:\-–]\s*/i, "")
@@ -40,9 +71,16 @@ export const testProviderConnection = async (settings = readProviderSettings(Ser
   if (!readiness.ok) {
     return { ok: false, reason: readiness.reason, missingFields: readiness.missingFields || [] };
   }
+  const t0 = Date.now();
   try {
-    const reply = await providerText(readiness.value, "Reply with the single word: ok", 16);
-    return { ok: true, reply: reply.slice(0, 60) };
+    const result = await providerTextDetailed(readiness.value, "Reply with the single word: ok", 16);
+    return {
+      ok: true,
+      reply: result.text.slice(0, 60),
+      ms: Date.now() - t0,
+      // Only OpenAI-shaped requests carry a reasoning setting.
+      ...(result.adaptive ? { reasoning: describeReasoningEffort(result.effort) } : {}),
+    };
   } catch (e) {
     return { ok: false, reason: "request_failed", error: e?.message || String(e) };
   }
@@ -60,9 +98,17 @@ export const classifyExistingGroupsRemoteBatch = async (pendingTabs, rules, sett
 
   const namesByLower = new Map(rules.map((r) => r?.name).filter(Boolean).map((name) => [name.toLowerCase(), name]));
   const out = new Map();
+  const active = withDeadline(readiness.value);
 
   for (const chunk of chunkTabsForProvider(pendingTabs)) {
-    const parsed = await providerJson(readiness.value, buildClassifyPrompt(rules, chunk.tabs));
+    let parsed;
+    try {
+      parsed = await providerJson(active, buildClassifyPrompt(rules, chunk.tabs));
+    } catch (e) {
+      if (!(e instanceof AiTimeLimitError)) throw e;
+      timeLimitToast(active, pendingTabs.length - out.size);
+      break;
+    }
     for (const [key, value] of Object.entries(parsed)) {
       const chunkIdx = Number.parseInt(key, 10);
       if (!Number.isFinite(chunkIdx) || chunkIdx < 0 || chunkIdx >= chunk.tabs.length) continue;
@@ -89,8 +135,9 @@ export const runPass2Remote = async (unmatched, rules, settings = readProviderSe
       return { ...empty, skipped: unmatched, failed: readiness.reason };
     }
 
+    const active = withDeadline(readiness.value);
     if (!rules.some((r) => r?.name)) {
-      const grouped = await clusterUnmatchedNewGroups(unmatched, readiness.value);
+      const grouped = await clusterUnmatchedNewGroups(unmatched, active);
       return { assignedToExisting: [], newGroups: grouped.groups, skipped: grouped.skipped };
     }
 
@@ -103,7 +150,7 @@ export const runPass2Remote = async (unmatched, rules, settings = readProviderSe
       initialBatchSize: PROVIDER_TAB_BATCH_SIZE,
       label: "remote provider",
       buildPrompt: (tabs, chunkSnippets) => buildUnifiedPrompt(rules, tabs, chunkSnippets),
-      fetchJson: (prompt) => providerJson(readiness.value, prompt, PROVIDER_JSON_MAX_TOKENS),
+      fetchJson: (prompt) => providerJson(active, prompt, PROVIDER_JSON_MAX_TOKENS),
     });
     const assignedToExisting = [];
     const newGroupsByKey = new Map();
@@ -127,8 +174,10 @@ export const runPass2Remote = async (unmatched, rules, settings = readProviderSe
     }
 
     const newGroups = await consolidateNewGroups([...newGroupsByKey.values()], (prompt) =>
-      providerJson(readiness.value, prompt), "Remote provider");
-    if (failures.length > 0) {
+      providerJson(active, prompt), "Remote provider");
+    if (timeLimitHit(active) && failures.length > 0) {
+      timeLimitToast(active, skipped.length);
+    } else if (failures.length > 0) {
       showToast(`Remote provider retried incomplete batches; ${skipped.length} tab(s) still did not move.`);
     }
     return { assignedToExisting, newGroups, skipped };
@@ -150,6 +199,7 @@ export const runPass2RemoteFresh = async (allTabs, settings = readProviderSettin
       return { ...empty, skipped: allTabs, failed: readiness.reason };
     }
 
+    const active = withDeadline(readiness.value);
     const { deduped, origToDeduped } = dedupeTabs(allTabs);
     const snippets = await fetchSnippets(deduped, "remote fresh");
     const { parsedByIndex: parsedByDedupedIndex, failures } = await collectProviderTabMap({
@@ -158,7 +208,7 @@ export const runPass2RemoteFresh = async (allTabs, settings = readProviderSettin
       initialBatchSize: PROVIDER_FRESH_TAB_BATCH_SIZE,
       label: "remote provider fresh",
       buildPrompt: (tabs, chunkSnippets) => buildFreshPrompt(tabs, chunkSnippets),
-      fetchJson: (prompt) => providerJson(readiness.value, prompt, PROVIDER_FRESH_JSON_MAX_TOKENS),
+      fetchJson: (prompt) => providerJson(active, prompt, PROVIDER_FRESH_JSON_MAX_TOKENS),
     });
     const newGroupsByKey = new Map();
     const skipped = [];
@@ -175,12 +225,14 @@ export const runPass2RemoteFresh = async (allTabs, settings = readProviderSettin
       newGroupsByKey.get(lower).tabs.push(allTabs[i]);
     }
 
-    if (failures.length > 0) {
+    if (timeLimitHit(active) && failures.length > 0) {
+      timeLimitToast(active, skipped.length);
+    } else if (failures.length > 0) {
       showToast(`Remote provider skipped ${failures.length} full-AI batch(es). Try a stronger model if some tabs did not move.`);
     }
 
     const newGroups = await consolidateNewGroups([...newGroupsByKey.values()], (prompt) =>
-      providerJson(readiness.value, prompt, PROVIDER_FRESH_JSON_MAX_TOKENS), "Remote provider");
+      providerJson(active, prompt, PROVIDER_FRESH_JSON_MAX_TOKENS), "Remote provider");
 
     return {
       assignedToExisting: [],
@@ -200,7 +252,16 @@ const clusterUnmatchedNewGroups = async (leftover, settings) => {
   const groupsByLower = new Map();
 
   for (const chunk of chunkTabsForProvider(leftover)) {
-    const parsed = await providerJson(settings, buildClusterPrompt(chunk.tabs));
+    let parsed;
+    try {
+      parsed = await providerJson(settings, buildClusterPrompt(chunk.tabs));
+    } catch (e) {
+      // Out of time: keep the groups earlier chunks produced instead of
+      // throwing them away with the rest of the pass.
+      if (!(e instanceof AiTimeLimitError)) throw e;
+      timeLimitToast(settings, leftover.length - seen.size);
+      break;
+    }
     const validIdx = (i) => Number.isFinite(i) && i >= 0 && i < chunk.tabs.length;
 
     for (const group of Array.isArray(parsed?.groups) ? parsed.groups : []) {
@@ -262,60 +323,96 @@ const resolveFetch = () => {
   return fetch;
 };
 
-const sendProviderRequest = async (request) => {
+// The per-request timeout shrinks to whatever is left of the pass's time limit,
+// and a pass that is already out of time sends nothing at all.
+const sendProviderRequest = async (request, settings = {}) => {
+  let timeoutMs = GENERATE_TIMEOUT_MS;
+  let limitedByDeadline = false;
+  if (settings.deadline != null) {
+    const remaining = settings.deadline - Date.now();
+    if (remaining <= 0) throw new AiTimeLimitError(settings.timeLimitSeconds);
+    if (remaining < timeoutMs) {
+      timeoutMs = remaining;
+      limitedByDeadline = true;
+    }
+  }
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), GENERATE_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const doFetch = resolveFetch();
     const response = await doFetch(request.url, { ...request.init, signal: controller.signal });
     return { response, body: await response.text() };
   } catch (e) {
-    throw new Error(e.name === "AbortError" ? `timeout after ${GENERATE_TIMEOUT_MS}ms` : (e.message || String(e)));
+    if (e.name === "AbortError" && limitedByDeadline) throw new AiTimeLimitError(settings.timeLimitSeconds);
+    throw new Error(e.name === "AbortError" ? `timeout after ${timeoutMs}ms` : (e.message || String(e)));
   } finally {
     clearTimeout(timer);
   }
 };
 
-// Which OpenAI parameter shape an endpoint and model accepted, remembered so a
-// sort pays the extra round trip once rather than on every batch. In-memory on
-// purpose: the shape belongs to the model, not to the user's settings, and
-// re-learning it after a restart costs one rejected request.
-const paramStyleByTarget = new Map();
+// What an endpoint and model accepted (parameter shape and reasoning value),
+// remembered so a sort pays for a rejected request once rather than on every
+// batch. In-memory on purpose: this belongs to the model, not to the user's
+// settings, and re-learning it after a restart costs one rejected request.
+// Keyed by the reasoning preference too, so changing it takes effect at once.
+const acceptedByTarget = new Map();
 
-const providerText = async (settings, prompt, maxTokens) => {
+// Each corrective retry changes exactly one thing (the shape or the reasoning
+// value), so a handful covers every combination. The bound only guards against
+// a provider that keeps answering with contradictory errors.
+const MAX_REQUEST_ATTEMPTS = 5;
+
+const providerTextDetailed = async (settings, prompt, maxTokens) => {
   const kind = getProviderKind(settings);
-  // Only the OpenAI-shaped kinds have the parameter split. Gemini and Ollama
-  // take their own parameters and are left alone.
+  // Only the OpenAI-shaped kinds have the parameter split and a reasoning
+  // field. Gemini and Ollama take their own parameters and are left alone.
   const adaptive = kind === "openai";
-  const target = `${settings.endpoint || ""}\x00${settings.model || ""}`;
-  const cached = adaptive ? paramStyleByTarget.get(target) : null;
-  const ladder = !adaptive
-    ? [PARAM_STYLE_CLASSIC]
-    : cached
-      ? [cached]
-      : paramStyleLadder(settings.model);
+  const preference = normalizeReasoningPreference(settings.reasoningEffort);
+  const target = `${settings.endpoint || ""}\x00${settings.model || ""}\x00${preference}`;
+  const cached = adaptive ? acceptedByTarget.get(target) : null;
+
+  let style = !adaptive ? PARAM_STYLE_CLASSIC : cached ? cached.style : guessParamStyle(settings.model);
+  let effort = !adaptive ? null : cached ? cached.effort : initialReasoningEffort(preference);
+  const triedStyles = new Set([style]);
+  const triedEfforts = new Set([effort]);
 
   let response;
   let body;
-  let style;
-  // Walk the ladder while the provider is specifically rejecting the shape of
-  // the request. Any other failure is the caller's problem, not ours.
-  for (const candidate of ladder) {
-    style = candidate;
-    ({ response, body } = await sendProviderRequest(buildProviderRequest(settings, prompt, maxTokens, candidate)));
-    if (response.ok || !isParamStyleError(response.status, body)) break;
-    console.log(`${LOG} provider rejected the ${candidate} parameter shape`);
+  // Retry only while the provider is specifically rejecting how the request
+  // was shaped. Any other failure is the caller's problem, not ours.
+  for (let attempt = 0; attempt < MAX_REQUEST_ATTEMPTS; attempt++) {
+    ({ response, body } = await sendProviderRequest(
+      buildProviderRequest(settings, prompt, maxTokens, style, effort), settings));
+    if (response.ok || !adaptive) break;
+    // Checked first: a reasoning complaint also says "unsupported".
+    if (effort != null && isReasoningParamError(response.status, body)) {
+      const next = nextReasoningEffort(preference, body, triedEfforts);
+      console.log(`${LOG} provider rejected reasoning_effort "${effort}"; ${next ? `trying "${next}"` : "retrying without it"}`);
+      effort = next;
+      triedEfforts.add(next);
+      continue;
+    }
+    if (isParamStyleError(response.status, body) && !triedStyles.has(otherParamStyle(style))) {
+      console.log(`${LOG} provider rejected the ${style} parameter shape`);
+      style = otherParamStyle(style);
+      triedStyles.add(style);
+      continue;
+    }
+    break;
   }
 
   if (!response.ok) throw new Error(`HTTP ${response.status}: ${body.slice(0, 200)}`);
-  if (adaptive) paramStyleByTarget.set(target, style);
+  if (adaptive) acceptedByTarget.set(target, { style, effort });
   const text = parseProviderResponse(kind, body);
   if (typeof text !== "string" || !text.trim()) {
     const detail = describeEmptyResponse(kind, body);
     throw new Error(`Provider response did not contain text${detail ? ` (${detail})` : ""}`);
   }
-  return text.trim();
+  return { text: text.trim(), adaptive, style, effort };
 };
+
+const providerText = async (settings, prompt, maxTokens) =>
+  (await providerTextDetailed(settings, prompt, maxTokens)).text;
 
 const dedupeTabs = (tabs) => {
   const indexByKey = new Map();

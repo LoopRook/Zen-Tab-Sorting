@@ -104,6 +104,17 @@ export const CONFIG = {
   AI_CUSTOM_API_KEY_PREF: "extensions.zen-auto-organize.ai-custom-api-key",
   AI_CUSTOM_MODEL_PREF: "extensions.zen-auto-organize.ai-custom-model",
   AI_CUSTOM_FORMAT_PREF: "extensions.zen-auto-organize.ai-custom-format",
+  // Reasoning effort for OpenAI-shaped requests: "fast" (reasoning off when the
+  // model allows it), "low", "medium", "high", or "default" (send nothing and
+  // let the provider decide). See modules/reasoning.mjs.
+  AI_REASONING_EFFORT_PREF: "extensions.zen-auto-organize.ai-reasoning-effort",
+  AI_REASONING_EFFORT_DEFAULT: "fast",
+  // Wall-clock limit for one remote AI pass, in seconds. 0 = no limit. Tabs
+  // the provider has not placed by then stay where they are.
+  AI_TIME_LIMIT_PREF: "extensions.zen-auto-organize.ai-time-limit",
+  AI_TIME_LIMIT_DEFAULT: 30,
+  AI_TIME_LIMIT_MIN: 5,
+  AI_TIME_LIMIT_MAX: 300,
   // One-shot flags: set true after the user dismisses the first-time AI
   // engine resource-warning modal. Each engine has its own acknowledgement.
   OLLAMA_ACKNOWLEDGED_PREF: "extensions.zen-auto-organize.ollama-acknowledged",

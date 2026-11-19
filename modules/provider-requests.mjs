@@ -10,24 +10,21 @@ const AUTH_HEADER_NAME = ["author", "ization"].join("");
 // the caller picks one.
 export const PARAM_STYLE_CLASSIC = "classic";
 export const PARAM_STYLE_MODERN = "modern";
-export const PARAM_STYLE_MODERN_BARE = "modern-bare";
 
-// Shapes to try, best guess first. A gateway may serve a newer model but
-// reject reasoning_effort, so the modern guess falls back to a bare modern
-// request before giving up and trying the classic one.
-export const paramStyleLadder = (model) =>
-  guessParamStyle(model) === PARAM_STYLE_MODERN
-    ? [PARAM_STYLE_MODERN, PARAM_STYLE_MODERN_BARE, PARAM_STYLE_CLASSIC]
-    : [PARAM_STYLE_CLASSIC, PARAM_STYLE_MODERN, PARAM_STYLE_MODERN_BARE];
+// The other shape, for the one retry after a provider rejects the first.
+export const otherParamStyle = (paramStyle) =>
+  paramStyle === PARAM_STYLE_MODERN ? PARAM_STYLE_CLASSIC : PARAM_STYLE_MODERN;
 
-const isModernStyle = (paramStyle) =>
-  paramStyle === PARAM_STYLE_MODERN || paramStyle === PARAM_STYLE_MODERN_BARE;
+const isModernStyle = (paramStyle) => paramStyle === PARAM_STYLE_MODERN;
 
-export const buildProviderRequest = (provider, prompt, maxTokens, paramStyle = PARAM_STYLE_CLASSIC) => {
+// `reasoningEffort` is sent as-is on either OpenAI shape, or omitted when null.
+// Which value to send, and what to do when a provider refuses it, is decided by
+// modules/reasoning.mjs and the caller; this builder only serializes.
+export const buildProviderRequest = (provider, prompt, maxTokens, paramStyle = PARAM_STYLE_CLASSIC, reasoningEffort = null) => {
   const boundedTokens = boundMaxTokens(maxTokens, paramStyle);
   switch (provider.provider) {
     case "openai":
-      return openAiRequest(provider.endpoint, provider.apiKey, provider.model, prompt, boundedTokens, paramStyle);
+      return openAiRequest(provider.endpoint, provider.apiKey, provider.model, prompt, boundedTokens, paramStyle, reasoningEffort);
     case "gemini":
       return geminiRequest(provider.apiKey, provider.model, prompt, boundedTokens);
     case "ollama":
@@ -35,7 +32,7 @@ export const buildProviderRequest = (provider, prompt, maxTokens, paramStyle = P
     case "custom":
       return provider.format === "ollama"
         ? ollamaRequest(provider.endpoint, provider.model, prompt, boundedTokens)
-        : openAiRequest(provider.endpoint, provider.apiKey, provider.model, prompt, boundedTokens, paramStyle);
+        : openAiRequest(provider.endpoint, provider.apiKey, provider.model, prompt, boundedTokens, paramStyle, reasoningEffort);
     default:
       throw new ProviderRequestError(provider.provider);
   }
@@ -49,13 +46,14 @@ export const guessParamStyle = (model) =>
 
 // True when a failed response is complaining about the parameter shape rather
 // than about the key, the model or the quota, so retrying with the other shape
-// is worth doing.
+// is worth doing. Complaints about the reasoning field are handled separately
+// (reasoning.mjs isReasoningParamError) and checked first by the caller.
 export const isParamStyleError = (status, body) => {
   if (status !== 400) return false;
   const text = String(body || "");
   if (/max_completion_tokens/i.test(text)) return true;
   return /unsupported|not supported|only the default|unrecognized|unknown/i.test(text)
-    && /max_tokens|temperature|reasoning_effort/i.test(text);
+    && /max_tokens|temperature/i.test(text);
 };
 
 // A 200 with no usable text is a dead end to debug from, so say why: a
@@ -85,7 +83,7 @@ export const parseProviderResponse = (kind, text) => {
   return null;
 };
 
-const openAiRequest = (endpoint, apiKey, model, prompt, maxTokens, paramStyle) => ({
+const openAiRequest = (endpoint, apiKey, model, prompt, maxTokens, paramStyle, reasoningEffort) => ({
   url: appendPath(endpoint, "/chat/completions"),
   init: {
     method: "POST",
@@ -94,14 +92,9 @@ const openAiRequest = (endpoint, apiKey, model, prompt, maxTokens, paramStyle) =
       model,
       messages: [{ role: "user", content: prompt }],
       ...(isModernStyle(paramStyle)
-        ? {
-          max_completion_tokens: maxTokens,
-          // "low" rather than "minimal": at minimal effort these models have
-          // been reported to return nothing at all on extraction-shaped
-          // prompts, which is exactly what sorting asks of them.
-          ...(paramStyle === PARAM_STYLE_MODERN ? { reasoning_effort: "low" } : {}),
-        }
+        ? { max_completion_tokens: maxTokens }
         : { max_tokens: maxTokens, temperature: 0.2 }),
+      ...(reasoningEffort ? { reasoning_effort: reasoningEffort } : {}),
     }),
   },
 });
