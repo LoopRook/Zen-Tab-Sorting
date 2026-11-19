@@ -19,7 +19,8 @@ import { runPass2, runPass2Fresh, applyPass2 } from "./ai.mjs";
 import { checkOllamaReady, reportOllamaError, normalizeOllamaHost, runPass2Ollama, runPass2OllamaFresh, classifyExistingGroupsBatch } from "./ollama.mjs";
 import { runPass2Remote, runPass2RemoteFresh, classifyExistingGroupsRemoteBatch } from "./remote-provider.mjs";
 import { showToast } from "./ui-toast.mjs";
-import { clearSortProgress } from "./sort-progress.mjs";
+import { clearSortProgress, setSortPhase } from "./sort-progress.mjs";
+import { beginSortScope, cancelRunningSort, endSortScope } from "./sort-cancel.mjs";
 import { showPreviewModal } from "./preview-modal.mjs";
 import { isFullAIMode, resolveEffectiveSortingMode, resolvePass2ApplyOptions, resolveSortingPlan } from "./sorting-mode.mjs";
 
@@ -84,18 +85,24 @@ const assignmentMapToPlan = (tabs, assignmentMap) => {
 };
 
 // One sort at a time per window. A second click while the AI is still
-// thinking (or while the Plan Mode modal is open) used to start a second,
-// overlapping sort over the same tabs; now it is ignored with a log line.
+// thinking used to start a second, overlapping sort over the same tabs; now it
+// stops the running one instead (sort-cancel.mjs). Batches already answered
+// are still applied; the rest of the tabs stay where they were.
 export const handleOrganizeClick = async () => {
   if (window._zaoSortRunning) {
-    console.log(`${LOG} sort already running in this window — click ignored`);
     wiggleButton();
+    if (cancelRunningSort()) {
+      console.log(`${LOG} stop requested from the wand`);
+      setSortPhase("stopping…", "Stopping the sort — keeping what is already answered");
+    }
     return;
   }
   window._zaoSortRunning = true;
+  beginSortScope();
   try {
     await runOrganize();
   } finally {
+    endSortScope();
     window._zaoSortRunning = false;
     clearSortProgress();
   }

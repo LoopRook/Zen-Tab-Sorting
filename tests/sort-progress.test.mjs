@@ -5,7 +5,7 @@ import { clearSortProgress, progressText, setSortProgress } from "../modules/sor
 import { collectProviderTabMap } from "../modules/remote-assignment-retry.mjs";
 
 test("Given counts When formatting progress Then a percentage and an exact count are produced", () => {
-  assert.deepEqual(progressText(35, 80), { short: "43%", long: "Sorting with AI: 35 of 80 tab(s) answered" });
+  assert.deepEqual(progressText(35, 80), { short: "43%", long: "Sorting with AI: 35 of 80 tab(s) answered. Click the wand to stop." });
   assert.deepEqual(progressText(0, 80).short, "0%");
   assert.deepEqual(progressText(99, 80).short, "100%");
 });

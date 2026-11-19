@@ -10,6 +10,7 @@
 import { CONFIG, LOG } from "./config.mjs";
 import { isOllamaWarmupEnabled } from "./rules.mjs";
 import { showToast } from "./ui-toast.mjs";
+import { isSortCancelled, linkToSortCancel } from "./sort-cancel.mjs";
 
 const PING_TIMEOUT_MS = 3000;
 // Classification calls: generous because the FIRST request after the daemon
@@ -39,13 +40,20 @@ export const normalizeOllamaHost = (host) => {
 
 // AbortController-based timeout — without this a fetch to a down daemon
 // would hang until the OS TCP timeout (often 60s+), blocking the tidy click.
+// Also aborts when the user stops the sort from the wand.
 const fetchWithTimeout = async (url, opts = {}, timeoutMs = PING_TIMEOUT_MS) => {
+  if (isSortCancelled()) throw Object.assign(new Error("Sorting stopped"), { name: "SortCancelled" });
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const unlink = linkToSortCancel(controller);
   try {
     return await fetch(url, { ...opts, signal: controller.signal });
+  } catch (e) {
+    if (isSortCancelled()) throw Object.assign(new Error("Sorting stopped"), { name: "SortCancelled" });
+    throw e;
   } finally {
     clearTimeout(timer);
+    unlink();
   }
 };
 

@@ -34,8 +34,13 @@ export const collectProviderTabMap = async ({
           )),
         });
       } catch (error) {
-        if (batchSize === 1) failures.push(`${label} tab ${indices[0]}: ${error.message || error}`);
-        else nextPending.push(...indices);
+        // `noSplit`: smaller batches would not fare better (timeout, provider
+        // down, rate limit, time limit, stopped), so give up on these tabs.
+        if (batchSize === 1 || error?.noSplit) {
+          failures.push(`${label} ${indices.length === 1 ? `tab ${indices[0]}` : `batch of ${indices.length}`}: ${error.message || error}`);
+        } else {
+          nextPending.push(...indices);
+        }
       }
       report();
     }

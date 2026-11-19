@@ -436,3 +436,65 @@ test("Given a persistent server error When a request is sent Then it fails after
     },
   );
 });
+
+test("Given a provider that times out When a batch fails Then it is not retried in smaller pieces", async () => {
+  const { collectProviderTabMap } = await import("../modules/remote-assignment-retry.mjs");
+  let calls = 0;
+  const result = await collectProviderTabMap({
+    tabs: Array.from({ length: 30 }, (_, i) => ({ title: `T${i}` })),
+    initialBatchSize: 30,
+    label: "slow",
+    buildPrompt: (batch) => batch,
+    fetchJson: async () => {
+      calls++;
+      throw Object.assign(new Error("timeout after 120000ms"), { noSplit: true });
+    },
+  });
+  assert.equal(calls, 1);
+  assert.equal(result.parsedByIndex.size, 0);
+  assert.match(result.failures[0], /batch of 30/);
+});
+
+test("Given a malformed answer When a batch fails Then it is still retried in smaller pieces", async () => {
+  const { collectProviderTabMap } = await import("../modules/remote-assignment-retry.mjs");
+  let calls = 0;
+  const result = await collectProviderTabMap({
+    tabs: Array.from({ length: 12 }, (_, i) => ({ title: `T${i}` })),
+    initialBatchSize: 12,
+    label: "garbled",
+    buildPrompt: (batch) => batch,
+    fetchJson: async (batch) => {
+      calls++;
+      if (batch.length === 12) throw new Error("Provider returned non-JSON content");
+      return Object.fromEntries(batch.map((_, i) => [String(i), "G"]));
+    },
+  });
+  assert.equal(calls, 4); // the 12 failed, then three batches of 4
+  assert.equal(result.parsedByIndex.size, 12);
+});
+
+test("Given the user stops the sort mid-pass When sorting Then answered batches are kept and no more requests are sent", async () => {
+  const { beginSortScope, cancelRunningSort, endSortScope } = await import("../modules/sort-cancel.mjs");
+  let calls = 0;
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    calls += 1;
+    const prompt = JSON.parse(init.body).messages[0].content;
+    const tabLines = [...prompt.matchAll(/^(\d+)\. /gm)];
+    cancelRunningSort(); // the user clicks the wand while batch 1 is answered
+    return new Response(JSON.stringify({
+      choices: [{ message: { content: JSON.stringify(Object.fromEntries(tabLines.map((m) => [m[1], "Reading"]))) } }],
+    }), { status: 200 });
+  };
+  beginSortScope();
+  try {
+    const tabs = Array.from({ length: 80 }, (_, idx) => ({ hostname: `c${idx}.example.test`, title: `C${idx}`, url: "" }));
+    const plan = await runPass2RemoteFresh(tabs, remoteSettings("https://stopped.example.test/v1", { timeLimitSeconds: "0" }));
+    assert.equal(calls, 1);
+    assert.equal(plan.newGroups[0].tabs.length, 35);
+    assert.equal(plan.skipped.length, 45);
+  } finally {
+    endSortScope();
+    globalThis.fetch = originalFetch;
+  }
+});

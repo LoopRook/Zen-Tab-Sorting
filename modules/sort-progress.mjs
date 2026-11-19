@@ -52,7 +52,7 @@ export const progressText = (done, total) => {
   const percent = safeTotal ? Math.floor((safeDone / safeTotal) * 100) : 0;
   return {
     short: `${percent}%`,
-    long: `Sorting with AI: ${safeDone} of ${safeTotal} tab(s) answered`,
+    long: `Sorting with AI: ${safeDone} of ${safeTotal} tab(s) answered. Click the wand to stop.`,
   };
 };
 

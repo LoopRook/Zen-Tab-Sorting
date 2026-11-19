@@ -34,6 +34,7 @@ import { collectProviderTabMap } from "./remote-assignment-retry.mjs";
 import { fetchPageSnippets } from "./tabs.mjs";
 import { showToast } from "./ui-toast.mjs";
 import { setSortPhase, setSortProgress } from "./sort-progress.mjs";
+import { isSortCancelled, linkToSortCancel, SortCancelledError, throwIfSortCancelled } from "./sort-cancel.mjs";
 
 const MERGE_PHASE = ["merging…", "Sorting with AI: merging similar group names"];
 
@@ -50,8 +51,27 @@ export class AiTimeLimitError extends Error {
   constructor(seconds) {
     super(`AI time limit reached${seconds ? ` (${seconds}s)` : ""}`);
     this.name = "AiTimeLimitError";
+    this.noSplit = true;
   }
 }
+
+// Errors that end a pass early but keep what was already answered.
+const isStopError = (e) => e instanceof AiTimeLimitError || e instanceof SortCancelledError;
+
+const stoppedToast = (leftCount) =>
+  showToast(`Sorting stopped — ${leftCount} tab(s) left where they were.`);
+
+// Splitting a batch into smaller ones helps when the answer was malformed,
+// cut off or missing tabs. It does not help when the provider is slow, down,
+// rate-limiting or refusing the key, and there it multiplied one slow failure
+// into dozens of requests. Those errors fail the batch as a whole instead.
+const NO_SPLIT_STATUSES = new Set([401, 403, 404, 408, 429, 500, 502, 503, 504]);
+const httpError = (status, body) => {
+  const error = new Error(`HTTP ${status}: ${body.slice(0, 200)}`);
+  error.status = status;
+  if (NO_SPLIT_STATUSES.has(status)) error.noSplit = true;
+  return error;
+};
 
 // Attach one pass's deadline to the settings every request in it receives.
 const withDeadline = (settings) => {
@@ -114,8 +134,9 @@ export const classifyExistingGroupsRemoteBatch = async (pendingTabs, rules, sett
     try {
       parsed = await providerJson(active, buildClassifyPrompt(rules, chunk.tabs));
     } catch (e) {
-      if (!(e instanceof AiTimeLimitError)) throw e;
-      timeLimitToast(active, pendingTabs.length - out.size);
+      if (!isStopError(e)) throw e;
+      if (isSortCancelled()) stoppedToast(pendingTabs.length - out.size);
+      else timeLimitToast(active, pendingTabs.length - out.size);
       break;
     }
     for (const [key, value] of Object.entries(parsed)) {
@@ -187,7 +208,9 @@ export const runPass2Remote = async (unmatched, rules, settings = readProviderSe
     setSortPhase(...MERGE_PHASE);
     const newGroups = await consolidateNewGroups([...newGroupsByKey.values()], (prompt) =>
       providerJson(active, prompt), "Remote provider");
-    if (timeLimitHit(active) && failures.length > 0) {
+    if (isSortCancelled()) {
+      stoppedToast(skipped.length);
+    } else if (timeLimitHit(active) && failures.length > 0) {
       timeLimitToast(active, skipped.length);
     } else if (failures.length > 0) {
       showToast(`Remote provider retried incomplete batches; ${skipped.length} tab(s) still did not move.`);
@@ -238,7 +261,9 @@ export const runPass2RemoteFresh = async (allTabs, settings = readProviderSettin
       newGroupsByKey.get(lower).tabs.push(allTabs[i]);
     }
 
-    if (timeLimitHit(active) && failures.length > 0) {
+    if (isSortCancelled()) {
+      stoppedToast(skipped.length);
+    } else if (timeLimitHit(active) && failures.length > 0) {
       timeLimitToast(active, skipped.length);
     } else if (failures.length > 0) {
       showToast(`Remote provider skipped ${failures.length} full-AI batch(es). Try a stronger model if some tabs did not move.`);
@@ -273,8 +298,9 @@ const clusterUnmatchedNewGroups = async (leftover, settings) => {
     } catch (e) {
       // Out of time: keep the groups earlier chunks produced instead of
       // throwing them away with the rest of the pass.
-      if (!(e instanceof AiTimeLimitError)) throw e;
-      timeLimitToast(settings, leftover.length - seen.size);
+      if (!isStopError(e)) throw e;
+      if (isSortCancelled()) stoppedToast(leftover.length - seen.size);
+      else timeLimitToast(settings, leftover.length - seen.size);
       break;
     }
     const validIdx = (i) => Number.isFinite(i) && i >= 0 && i < chunk.tabs.length;
@@ -334,17 +360,25 @@ const sendProviderRequest = async (request, settings = {}) => {
       limitedByDeadline = true;
     }
   }
+  throwIfSortCancelled();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const unlink = linkToSortCancel(controller);
   try {
     const doFetch = resolveFetch();
     const response = await doFetch(request.url, { ...request.init, signal: controller.signal });
     return { response, body: await response.text() };
   } catch (e) {
+    if (isSortCancelled()) throw new SortCancelledError();
     if (e.name === "AbortError" && limitedByDeadline) throw new AiTimeLimitError(settings.timeLimitSeconds);
-    throw new Error(e.name === "AbortError" ? `timeout after ${timeoutMs}ms` : (e.message || String(e)));
+    const error = new Error(e.name === "AbortError" ? `timeout after ${timeoutMs}ms` : (e.message || String(e)));
+    // A timed-out or unreachable provider will not answer smaller batches
+    // any faster; see NO_SPLIT_STATUSES.
+    error.noSplit = true;
+    throw error;
   } finally {
     clearTimeout(timer);
+    unlink();
   }
 };
 
@@ -413,7 +447,7 @@ const providerTextDetailed = async (settings, prompt, maxTokens) => {
     break;
   }
 
-  if (!response.ok) throw new Error(`HTTP ${response.status}: ${body.slice(0, 200)}`);
+  if (!response.ok) throw httpError(response.status, body);
   if (adaptive) acceptedByTarget.set(target, { style, effort });
   const unusable = describeUnusableResponse(kind, body);
   if (unusable) throw new Error(unusable);
