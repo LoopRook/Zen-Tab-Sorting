@@ -74,13 +74,24 @@ const loadEmbeddingEngine = () => {
 
 // ─── Math + normalization helpers ─────────────────────────────────────────────
 
-// The embedding engine sometimes returns nested results — flatten / pool here so
-// callers always get a flat number[] back.
-const poolEmbedding = (raw) => {
+// The embedding engine returns several shapes depending on the call and the
+// Firefox version — flatten / pool here so callers always get a flat number[].
+// The last branch is the raw Tensor ({ data, dims }) the engine hands back for
+// a pooled single input; without it every embedding parsed to null and Local
+// AI silently matched nothing. (Fix from upstream OpenTabSort-Zen 613719f.)
+export const poolEmbedding = (raw) => {
   if (!raw) return null;
   if (raw?.[0]?.embedding && Array.isArray(raw[0].embedding)) return averageVectors(raw[0].embedding);
   if (Array.isArray(raw?.[0])) return averageVectors(raw[0]);
   if (Array.isArray(raw)) return averageVectors(raw);
+  if (raw?.data && typeof raw.data.length === "number") {
+    try {
+      const flat = Array.from(raw.data);
+      return flat.length > 0 ? flat : null;
+    } catch {
+      return null;
+    }
+  }
   return null;
 };
 
@@ -147,7 +158,12 @@ const embed = async (input) => {
   if (text.length > MAX_EMBED_INPUT_CHARS) text = text.slice(0, MAX_EMBED_INPUT_CHARS);
   try {
     const engine = await loadEmbeddingEngine();
-    const result = await engine.run({ args: [text] });
+    // Same call shape as Firefox's own SmartTabGrouping: a batch of one, mean
+    // pooled and normalized. A bare `args: [text]` returns per-token output.
+    const result = await engine.run({
+      args: [[text]],
+      options: { pooling: "mean", normalize: true },
+    });
     const pooled = poolEmbedding(result);
     return pooled ? l2Normalize(pooled) : null;
   } catch (e) {
