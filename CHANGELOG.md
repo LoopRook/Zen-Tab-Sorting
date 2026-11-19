@@ -1,5 +1,39 @@
 # Changelog
 
+## 1.12.0-dev.1 — 2026-11-19 (dev branch)
+
+A test build from the `dev` branch. Install it in Sine as
+`LoopRook/Zen-Tab-Sorting/tree/dev`; it replaces the stable install in place
+(same mod id) and keeps every setting and key. Reinstall
+`LoopRook/Zen-Tab-Sorting` to go back.
+
+### Added
+- **Reasoning effort** setting for OpenAI-compatible and Custom engines.
+  Default **Fast** asks for reasoning off and falls back to the cheapest level
+  the model accepts, read from the provider's own rejection. Low, Medium, High
+  and Provider default are also available.
+- **AI time limit** for remote engines (30s default, 0 = none). Batches already
+  answered are kept; the rest stay put, with a toast.
+- The **Test connection** result shows the round-trip time and reasoning level.
+
+### Fixed
+- Collapsed state is remembered per group id, so two groups with the same name
+  no longer share it. Old name-based entries migrate after one restart.
+- A second wand click during a running sort no longer starts an overlapping one.
+- Switching workspace while the AI is thinking no longer drops its groups into
+  the workspace you switched to.
+- Local AI: embeddings are requested in the shape Firefox's engine expects, so
+  the Local engine can match tabs at all (upstream OpenTabSort-Zen 613719f).
+- Gateway errors inside an HTTP 200, cut-off answers, and refusals are reported
+  as such instead of being parsed as (partial) results; the JSON reader skips
+  `<think>` blocks and pulls one object out of surrounding prose.
+- Ollama: cut-off or non-JSON replies are treated as failures.
+- Page snippets are fetched six at a time, 256 KiB per page at most, within a
+  six-second budget, instead of one request per tab all at once.
+- Custom engine works with servers that need no API key.
+- Identical toasts in quick succession are shown once.
+- The settings dialog no longer refreshes the rules editor on every DOM change.
+
 ## 1.0.2 — 2026-06-01
 
 ### Added
